@@ -7,7 +7,7 @@ from utils import seed_torch, makePrint
 
 def main():
     seed_torch()
-    device = torch.device('cuda:0')
+    device = torch.device('cpu')
     engine = trainer(device)
     print("start training...", flush=True)
     train_time = []
