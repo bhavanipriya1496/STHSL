@@ -81,11 +81,20 @@ class trainer():
             feats = torch.Tensor(feats).to(args.device)
             labels = torch.Tensor(labels).to(args.device)
 
-            out_local, eb_local, eb_global, Infomax_pred, out_global = self.model(feats, DGI_feats)
+            # end should be args.horizon, should be fixed later
+            time_steps_to_predict = torch.arange(start=0, end=1, step=1).float().to(device)
+            time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+
+            out_local, eb_local, eb_global, Infomax_pred, out_global, fe, Z_t, pred = self.model(feats, DGI_feats, time_steps_to_predict)
+            
+            print("Decoder input Z_t shape:", Z_t.shape)
+            print("Decoder output pred shape:", pred.shape)
+            print("Labels shape:", labels.shape)
+
             out_local = self.handler.zInverse(out_local)
             out_global = self.handler.zInverse(out_global)
             loss = (utils.Informax_loss(Infomax_pred, Infomax_labels) * args.ir) + (utils.infoNCEloss(eb_global, eb_local) * args.cr) + \
-                   self.loss(out_local, labels, mask) + self.loss(out_global, labels, mask)
+                   self.loss(out_local, labels, mask) + self.loss(pred, labels, mask)
 
             loss.backward()
             self.optimizer.step()
@@ -128,10 +137,14 @@ class trainer():
             shuf_feats = feats[:, idx, :, :]
             feats = torch.Tensor(feats).to(args.device)
             shuf_feats = torch.Tensor(shuf_feats).to(args.device)
-            out_local, eb_local, eb_global, DGI_pred, out_global = self.model(feats, shuf_feats)
+
+            # end should be args.horizon, should be fixed later
+            time_steps_to_predict = torch.arange(start=0, end=1, step=1).float().to(device)
+            time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+            out_local, eb_local, eb_global, DGI_pred, out_global, fe , Z_t, pred = self.model(feats, shuf_feats, time_steps_to_predict)
 
             if isSparsity:
-                output = self.handler.zInverse(out_global)
+                output = self.handler.zInverse(pred)
                 _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask1)
                 _, sqLoss2, absLoss2, tstNums2, apeLoss2, posNums2 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask2)
                 _, sqLoss3, absLoss3, tstNums3, apeLoss3, posNums3 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask3)
@@ -263,8 +276,12 @@ def test(model, handler):
         idx = np.random.permutation(args.areaNum)
         shuf_feats = feats[:, idx, :, :]
 
-        out_local, eb_local, eb_global, DGI_pred, out_global = model(feats, shuf_feats)
-        output = handler.zInverse(out_global)
+        # end should be args.horizon, should be fixed later
+        time_steps_to_predict = torch.arange(start=0, end=1, step=1).float().to(device)
+        time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+        
+        out_local, eb_local, eb_global, DGI_pred, out_global, fe, Z_t, pred = model(feats, shuf_feats, time_steps_to_predict)
+        output = handler.zInverse(pred)
 
         _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask1)
         _, sqLoss2, absLoss2, tstNums2, apeLoss2, posNums2 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask2)
