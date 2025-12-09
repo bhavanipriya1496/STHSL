@@ -3,6 +3,10 @@ import torch
 import torch.nn.functional as F
 from Params import args
 import random
+import numpy as np
+import scipy.sparse as sp
+import torch 
+import torch.nn as nn
 
 def cal_loss_r(preds, labels, mask):
     loss = torch.sum(torch.square(preds - labels) * mask) / torch.sum(mask)
@@ -63,3 +67,49 @@ def makePrint(name, ep, reses):
         ret += '%s = %.4f, ' % (metric, val)
     ret = ret[:-2] + '  '
     return ret
+
+def create_net(n_inputs, n_outputs, n_layers = 0, 
+	n_units = 100, nonlinear = nn.Tanh):
+	layers = [nn.Linear(n_inputs, n_units)]
+	for i in range(n_layers):
+		layers.append(nonlinear())
+		layers.append(nn.Linear(n_units, n_units))
+
+	layers.append(nonlinear())
+	layers.append(nn.Linear(n_units, n_outputs))
+	return nn.Sequential(*layers)
+
+def graph_grad(adj_mx):
+    """Fetch the graph gradient operator."""
+    num_nodes = adj_mx.shape[0]
+
+    num_edges = (adj_mx > 0.).sum()
+    grad = torch.zeros(num_nodes, num_edges)
+    e = 0
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if adj_mx[i, j] == 0:
+                continue
+
+            grad[i, e] = 1.
+            grad[j, e] = -1.
+            e += 1
+    return grad
+
+def init_network_weights(net, std = 0.1):
+    """
+    Just for nn.Linear net.
+    """
+    for m in net.modules():
+        if isinstance(m, nn.Linear):
+            nn.init.normal_(m.weight, mean=0, std=std)
+            nn.init.constant_(m.bias, val=0)
+
+def calculate_random_walk_matrix(adj_mx):
+    adj_mx = sp.coo_matrix(adj_mx)
+    d = np.array(adj_mx.sum(1))
+    d_inv = np.power(d, -1).flatten()
+    d_inv[np.isinf(d_inv)] = 0.
+    d_mat_inv = sp.diags(d_inv)
+    random_walk_mx = d_mat_inv.dot(adj_mx).tocoo()
+    return random_walk_mx
