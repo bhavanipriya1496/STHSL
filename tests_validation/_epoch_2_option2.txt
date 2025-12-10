@@ -1,0 +1,271 @@
+self.predir Datasets/NYC_crime/
+(256, 92, 4)
+Row: 16 , Col: 16
+Sparsity: 0.13535027754934212
+ODE setting --latent 16 --samples 1 --method dopri5             --atol 0.000100 --rtol 0.000100 --gen_layer 1 --gen_dim 64
+model load successfully
+===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([16, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([16, 16, 256, 30, 4])
+A_latent shape: torch.Size([16, 256, 256])
+Step 0/6: loss = 2.69, regLoss = 2.69         ===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([16, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([16, 16, 256, 30, 4])
+A_latent shape: torch.Size([16, 256, 256])
+Step 1/6: loss = 2.48, regLoss = 2.48         ===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([16, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([16, 16, 256, 30, 4])
+A_latent shape: torch.Size([16, 256, 256])
+Step 2/6: loss = 2.02, regLoss = 2.02         ===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([16, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([16, 16, 256, 30, 4])
+A_latent shape: torch.Size([16, 256, 256])
+Step 3/6: loss = 2.08, regLoss = 2.08         ===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([16, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([16, 16, 256, 30, 4])
+A_latent shape: torch.Size([16, 256, 256])
+Step 4/6: loss = 2.35, regLoss = 2.35         ===== TRAINING ARGS =====
+lr: 0.001
+weight_decay: 0.0001
+cr: 0.8
+ir: 1
+t: 0.05
+batch: 16
+epoch: 5
+latdim: 16
+temporalRange: 30
+cateNum: 4
+data: NYC
+kernelSize: 3
+border: 0.5
+hyperNum: 128
+dropRateL: 0.2
+dropRateG: 0.1
+n_traj_samples: 1
+ode_method: dopri5
+odeint_atol: 0.0001
+odeint_rtol: 0.001
+gen_layers: 1
+gen_dim: 64
+save_latent: false
+gcn_step: 2
+rnn_units: 64
+horizon: 1
+filter_type: 2
+device: cpu
+tstEpoch: 1
+save: ./Save/
+checkpoint: Logs/option2/_epoch_2_MAE_1.04_MAPE_0.56.pth
+row: 16
+col: 16
+offNum: 4
+areaNum: 256
+trnDays: 608
+valDays: 30
+tstDays: 92
+decay_step: 38
+==========================
+eb_tra_global shape: torch.Size([12, 16, 256, 30, 4])
+eb_tra_local shape: torch.Size([12, 16, 256, 30, 4])
+A_latent shape: torch.Size([12, 256, 256])
+Step 5/6: loss = 1.77, regLoss = 1.77         Epoch 5/5, Best: RMSE = 1.5038, MAE = 1.0360, MAPE = 0.5600, RMSE_0 = 1.1575, MAE_0 = 0.8604, MAPE_0 = 0.5428, RMSE_1 = 1.7729, MAE_1 = 1.1414, MAPE_1 = 0.5630, RMSE_2 = 1.3898, MAE_2 = 1.0190, MAPE_2 = 0.5635, RMSE_3 = 1.4253, MAE_3 = 1.0480, MAPE_3 = 0.5678, RMSE_mask_1 = 0.8536, MAE_mask_1 = 0.7669, MAPE_mask_1 = 0.6695, RMSE_mask_2 = 1.0232, MAE_mask_2 = 0.8223, MAPE_mask_2 = 0.5870, RMSE_mask_3 = 1.3408, MAE_mask_3 = 0.9451, MAPE_mask_3 = 0.4779, RMSE_mask_4 = 2.1369, MAE_mask_4 = 1.4495, MAPE_mask_4 = 0.5497, epochLoss = 13.3955  
