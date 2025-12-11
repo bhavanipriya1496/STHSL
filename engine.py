@@ -66,11 +66,7 @@ class trainer():
             ed = min((i + 1) * args.batch, num)
             batIds = ids[st: ed]
             bt = ed - st
-
-            Infomax_L1 = torch.ones(bt, args.offNum, args.areaNum)
-            Infomax_L2 = torch.zeros(bt, args.offNum, args.areaNum)
-            Infomax_labels = torch.Tensor(torch.cat((Infomax_L1, Infomax_L2), -1)).to(args.device)
-
+            
             tem = self.sampleTrainBatch(batIds, st, ed)
             feats, labels, mask = tem
             mask = torch.Tensor(mask).to(args.device)
@@ -81,10 +77,10 @@ class trainer():
             feats = torch.Tensor(feats).to(args.device)
             labels = torch.Tensor(labels).to(args.device)
 
-            out_local, eb_local, eb_global, Infomax_pred, out_global = self.model(feats, DGI_feats)
+            out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, Zt = self.model(feats, DGI_feats)
             out_local = self.handler.zInverse(out_local)
             out_global = self.handler.zInverse(out_global)
-            loss = (utils.Informax_loss(Infomax_pred, Infomax_labels) * args.ir) + (utils.infoNCEloss(eb_global, eb_local) * args.cr) + \
+            loss = (utils.Informax_loss(Infomax_pred) * args.ir) + (utils.infoNCEloss(eb_tra_global, eb_tra_local) * args.cr) + \
                    self.loss(out_local, labels, mask) + self.loss(out_global, labels, mask)
 
             loss.backward()
@@ -128,7 +124,7 @@ class trainer():
             shuf_feats = feats[:, idx, :, :]
             feats = torch.Tensor(feats).to(args.device)
             shuf_feats = torch.Tensor(shuf_feats).to(args.device)
-            out_local, eb_local, eb_global, DGI_pred, out_global = self.model(feats, shuf_feats)
+            out_local, eb_local, eb_global, DGI_pred, out_global, Zt = self.model(feats, shuf_feats)
 
             if isSparsity:
                 output = self.handler.zInverse(out_global)
@@ -263,7 +259,7 @@ def test(model, handler):
         idx = np.random.permutation(args.areaNum)
         shuf_feats = feats[:, idx, :, :]
 
-        out_local, eb_local, eb_global, DGI_pred, out_global = model(feats, shuf_feats)
+        out_local, eb_local, eb_global, DGI_pred, out_global, Zt = model(feats, shuf_feats)
         output = handler.zInverse(out_global)
 
         _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask1)
