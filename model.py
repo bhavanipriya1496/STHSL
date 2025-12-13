@@ -270,6 +270,7 @@ class STHSL(nn.Module):
 
         # ====== global pattern evolution ======
         hy_embeds = self.Hypergraph_Infomax.encode(embeds_in_global)
+        
         # hy_embeds, Infomax_pred = self.Hypergraph_Infomax(embeds_in_global, DGI_neg)
         tem_global1 = self.tem_cnn_global1(hy_embeds)
         tem_global2 = self.tem_cnn_global2(tem_global1)
@@ -306,7 +307,10 @@ class STHSL(nn.Module):
         z0_flat = z0.reshape(B, -1).unsqueeze(0)
 
         # time steps for ODE
-        t = torch.linspace(0, args.horizon, steps=args.horizon+1).to(z0.device)
+        t = torch.tensor([0.0], device=z0.device)
+
+        # old option1
+        # t = torch.linspace(0, args.horizon, steps=args.horizon+1).to(z0.device)
 
         sol, _ = self.de_solver(z0_flat, t)
         Zt = sol[-1, 0].view(B, self.num_nodes, C_z)  # (B, N, C_z)

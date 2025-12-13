@@ -1,0 +1,6 @@
+self.predir Datasets/NYC_crime/
+(256, 92, 4)
+Row: 16 , Col: 16
+Sparsity: 0.13535027754934212
+model load successfully
+Step 0/6: loss = 2.30, regLoss = 2.30         Step 1/6: loss = 2.11, regLoss = 2.11         Step 2/6: loss = 1.83, regLoss = 1.83         Step 3/6: loss = 1.76, regLoss = 1.76         Step 4/6: loss = 1.97, regLoss = 1.97         Step 5/6: loss = 1.57, regLoss = 1.57         Epoch 5/5, Best: RMSE = 1.3949, MAE = 0.9874, MAPE = 0.5597, RMSE_0 = 1.1882, MAE_0 = 0.9008, MAPE_0 = 0.5848, RMSE_1 = 1.6623, MAE_1 = 1.0976, MAPE_1 = 0.5493, RMSE_2 = 1.2321, MAE_2 = 0.9243, MAPE_2 = 0.5452, RMSE_3 = 1.2454, MAE_3 = 0.9533, MAPE_3 = 0.5668, RMSE_mask_1 = 1.0335, MAE_mask_1 = 0.9567, MAPE_mask_1 = 0.8504, RMSE_mask_2 = 1.0506, MAE_mask_2 = 0.8424, MAPE_mask_2 = 0.6067, RMSE_mask_3 = 1.2278, MAE_mask_3 = 0.8373, MAPE_mask_3 = 0.4029, RMSE_mask_4 = 1.8833, MAE_mask_4 = 1.2638, MAPE_mask_4 = 0.4996, epochLoss = 11.5412  

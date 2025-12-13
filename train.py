@@ -6,7 +6,7 @@ from Params import args
 from utils import seed_torch, makePrint
 
 def main():
-    seed_torch()
+    seed_torch(523)
     device = torch.device('cpu')
     engine = trainer(device)
     print("start training...", flush=True)
