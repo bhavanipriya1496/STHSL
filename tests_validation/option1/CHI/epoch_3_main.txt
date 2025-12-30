@@ -1,0 +1,6 @@
+self.predir Datasets/CHI_crime/
+(168, 92, 4)
+Row: 14 , Col: 12
+Sparsity: 0.2637960356556416
+model load successfully
+Step 0/6: loss = 2.59, regLoss = 2.59         Step 1/6: loss = 2.52, regLoss = 2.52         Step 2/6: loss = 2.59, regLoss = 2.59         Step 3/6: loss = 2.70, regLoss = 2.70         Step 4/6: loss = 2.78, regLoss = 2.78         Step 5/6: loss = 2.06, regLoss = 2.06         Epoch 5/5, Best: RMSE = 1.6019, MAE = 1.1076, MAPE = 0.5081, RMSE_0 = 2.0299, MAE_0 = 1.3719, MAPE_0 = 0.5258, RMSE_1 = 1.5610, MAE_1 = 1.1671, MAPE_1 = 0.5434, RMSE_2 = 1.0822, MAE_2 = 0.7833, MAPE_2 = 0.4434, RMSE_3 = 1.3134, MAE_3 = 0.9309, MAPE_3 = 0.4906, RMSE_mask_1 = 1.0249, MAE_mask_1 = 0.9612, MAPE_mask_1 = 0.8658, RMSE_mask_2 = 1.0534, MAE_mask_2 = 0.8282, MAPE_mask_2 = 0.5824, RMSE_mask_3 = 1.1609, MAE_mask_3 = 0.8134, MAPE_mask_3 = 0.4028, RMSE_mask_4 = 1.9310, MAE_mask_4 = 1.3450, MAPE_mask_4 = 0.5024, epochLoss = 15.2407  
