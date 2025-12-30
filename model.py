@@ -294,7 +294,7 @@ class STHSL(nn.Module):
         print("A_latent shape:", A_latent.shape)
 
         # ---------- STEP 3: Set adjacency inside ODEFunc ----------
-        self.odefunc.set_adjacency(A_latent)
+        self.odefunc.set_adjacency(A_latent.detach())
 
         # ---------- STEP 4: Fuse H + G → Zₜ₀ ----------
         fusion = torch.cat([H, G], dim=-1)       # (B, N, 2C)

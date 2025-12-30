@@ -78,7 +78,7 @@ class ODEFunc(nn.Module):
         self.nfe = 0
 
         # ----------------------------------------
-        # NEW METHOD FOR SETTING LATENT ADJACENCY
+        # METHOD FOR SETTING LATENT ADJACENCY
         # ----------------------------------------
     def set_adjacency(self, A_latent):
         """
