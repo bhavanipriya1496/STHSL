@@ -242,10 +242,10 @@ class STHSL(nn.Module):
         return A.detach().cpu().numpy()
 
     def forward(self, embeds_true, neg, time_steps_to_predict):
-        print("===== TRAINING ARGS =====")
-        for k, v in vars(args).items():
-            print(f"{k}: {v}")
-        print("==========================")
+        # print("===== TRAINING ARGS =====")
+        #for k, v in vars(args).items():
+        #    print(f"{k}: {v}")
+        #print("==========================")
         embeds_in_global = self.dimConv_in(embeds_true.unsqueeze(1))
         DGI_neg = self.dimConv_in(neg.unsqueeze(1))
         embeds_in_local = embeds_in_global.permute(0, 3, 1, 2, 4).contiguous().view(-1, args.latdim, args.row, args.col, 4)
@@ -271,8 +271,8 @@ class STHSL(nn.Module):
 
         out_global = self.dimConv_global(eb_global).squeeze(1)
 
-        print("eb_tra_global shape:", eb_tra_global.shape)
-        print("eb_tra_local shape:", eb_tra_local.shape)
+        #print("eb_tra_global shape:", eb_tra_global.shape)
+        #print("eb_tra_local shape:", eb_tra_local.shape)
 
         # ============================================================
         # NEW SECTION: LATENT ADJACENCY + FUSION + ODE
@@ -291,7 +291,7 @@ class STHSL(nn.Module):
 
         # STEP 3: latent adjacency (B, Area, Area)
         A_latent = torch.matmul(H, G.transpose(1,2))
-        print("A_latent shape:", A_latent.shape)
+        # print("A_latent shape:", A_latent.shape)
 
         # ---------- STEP 3: Set adjacency inside ODEFunc ----------
         self.odefunc.set_adjacency(A_latent.detach())

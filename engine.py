@@ -87,9 +87,9 @@ class trainer():
 
             out_local, eb_local, eb_global, Infomax_pred, out_global, fe, Z_t, pred = self.model(feats, DGI_feats, time_steps_to_predict)
             
-            print("Decoder input Z_t shape:", Z_t.shape)
-            print("Decoder output pred shape:", pred.shape)
-            print("Labels shape:", labels.shape)
+            # print("Decoder input Z_t shape:", Z_t.shape)
+            # print("Decoder output pred shape:", pred.shape)
+            # print("Labels shape:", labels.shape)
 
             out_local = self.handler.zInverse(out_local)
             out_global = self.handler.zInverse(out_global)
