@@ -66,10 +66,10 @@ class trainer():
             ed = min((i + 1) * args.batch, num)
             batIds = ids[st: ed]
             bt = ed - st
-
-            Infomax_L1 = torch.ones(bt, args.offNum, args.areaNum)
-            Infomax_L2 = torch.zeros(bt, args.offNum, args.areaNum)
-            Infomax_labels = torch.Tensor(torch.cat((Infomax_L1, Infomax_L2), -1)).to(args.device)
+            if args.use_ode_option in ("baseline", "option2"):
+                Infomax_L1 = torch.ones(bt, args.offNum, args.areaNum)
+                Infomax_L2 = torch.zeros(bt, args.offNum, args.areaNum)
+                Infomax_labels = torch.Tensor(torch.cat((Infomax_L1, Infomax_L2), -1)).to(args.device)
 
             tem = self.sampleTrainBatch(batIds, st, ed)
             feats, labels, mask = tem
@@ -81,11 +81,31 @@ class trainer():
             feats = torch.Tensor(feats).to(args.device)
             labels = torch.Tensor(labels).to(args.device)
 
-            out_local, eb_local, eb_global, Infomax_pred, out_global = self.model(feats, DGI_feats)
+            if args.use_ode_option == "baseline":
+                out_local, eb_local, eb_global, Infomax_pred, out_global = self.model(feats, DGI_feats)
+            elif args.use_ode_option == "option1":
+                out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, Zt = self.model(feats, DGI_feats)
+            elif args.use_ode_option == "option2":
+                # Bhavani: end should be args.horizon, should be fixed later
+                out_local, eb_local, eb_global, Infomax_pred, out_global, fe, Z_t, pred = self.model(feats, DGI_feats)
+            
+            # print("Decoder input Z_t shape:", Z_t.shape)
+            # print("Decoder output pred shape:", pred.shape)
+            # print("Labels shape:", labels.shape)
             out_local = self.handler.zInverse(out_local)
             out_global = self.handler.zInverse(out_global)
-            loss = (utils.Informax_loss(Infomax_pred, Infomax_labels) * args.ir) + (utils.infoNCEloss(eb_global, eb_local) * args.cr) + \
-                   self.loss(out_local, labels, mask) + self.loss(out_global, labels, mask)
+
+            if args.use_ode_option == "baseline":
+                loss = (utils.Informax_loss(Infomax_pred, Infomax_labels) * args.ir) + (utils.infoNCEloss(eb_global, eb_local) * args.cr) + \
+                self.loss(out_local, labels, mask) + self.loss(out_global, labels, mask)
+            elif args.use_ode_option == "option1":
+                loss = (utils.Informax_loss_option1(Infomax_pred) * args.ir) + (utils.infoNCEloss(eb_tra_global, eb_tra_local) * args.cr) + \
+                self.loss(out_local, labels, mask) + self.loss(out_global, labels, mask)
+            elif args.use_ode_option == "option2":
+                loss = (utils.Informax_loss(Infomax_pred, Infomax_labels) * args.ir) + (utils.infoNCEloss(eb_global, eb_local) * args.cr) + \
+                self.loss(out_local, labels, mask) + self.loss(pred, labels, mask)
+            else:
+                raise ValueError("Unknown ODE option {args.use_ode_option}")
 
             loss.backward()
             self.optimizer.step()
@@ -128,10 +148,23 @@ class trainer():
             shuf_feats = feats[:, idx, :, :]
             feats = torch.Tensor(feats).to(args.device)
             shuf_feats = torch.Tensor(shuf_feats).to(args.device)
-            out_local, eb_local, eb_global, DGI_pred, out_global = self.model(feats, shuf_feats)
+            if args.use_ode_option == "baseline":
+                out_local, eb_local, eb_global, DGI_pred, out_global = self.model(feats, shuf_feats)
+            elif args.use_ode_option == "option1":
+                out_local, eb_local, eb_global, DGI_pred, out_global, Zt = self.model(feats, shuf_feats)
+            elif args.use_ode_option == "option2":
+                out_local, eb_local, eb_global, DGI_pred, out_global, fe , Z_t, pred = self.model(feats, shuf_feats)
+            else:
+                raise ValueError("Unknown ODE option {args.use_ode_option}")
 
             if isSparsity:
-                output = self.handler.zInverse(out_global)
+                if args.use_ode_option in ("baseline", "option1"):
+                    output = self.handler.zInverse(out_global)
+                elif args.use_ode_option == "option2":
+                    output = self.handler.zInverse(pred)
+                else:
+                    raise ValueError("Unknown ODE option {args.use_ode_option}")
+                
                 _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask1)
                 _, sqLoss2, absLoss2, tstNums2, apeLoss2, posNums2 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask2)
                 _, sqLoss3, absLoss3, tstNums3, apeLoss3, posNums3 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, self.handler.mask3)
@@ -263,8 +296,18 @@ def test(model, handler):
         idx = np.random.permutation(args.areaNum)
         shuf_feats = feats[:, idx, :, :]
 
-        out_local, eb_local, eb_global, DGI_pred, out_global = model(feats, shuf_feats)
-        output = handler.zInverse(out_global)
+        if args.use_ode_option == "baseline":
+            out_local, eb_local, eb_global, DGI_pred, out_global = model(feats, shuf_feats)
+            output = handler.zInverse(out_global)
+        elif args.use_ode_option == "option1":
+            out_local, eb_local, eb_global, DGI_pred, out_global, Zt = model(feats, shuf_feats)
+            output = handler.zInverse(out_global)
+        elif args.use_ode_option == "option2":
+            # Bhavani:end should be args.horizon, should be fixed later
+            out_local, eb_local, eb_global, DGI_pred, out_global, fe, Z_t, pred = model(feats, shuf_feats)
+            output = handler.zInverse(pred)
+        else:
+            raise ValueError("Unknown ODE option {args.use_ode_option}")
 
         _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask1)
         _, sqLoss2, absLoss2, tstNums2, apeLoss2, posNums2 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask2)

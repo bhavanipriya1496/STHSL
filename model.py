@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 from Params import args
+from ode_func import ODEFunc
+from ode_func import ODEFuncDynAdj
+from diffeq_solver import DiffeqSolver
+import utils
 
 # Local
 # Local Spatial cnn
@@ -110,6 +114,81 @@ class Hypergraph_Infomax(nn.Module):
         h_neg = self.Hypergraph(eb_neg)
         ret = self.disc(score, h_pos, h_neg)
         return h_pos, ret
+    
+    if args.use_ode_option == "option1":
+        def encode(self, eb):
+            return self.Hypergraph(eb)
+
+if args.use_ode_option == "option1":
+    # Ψ discriminator on Z(t) for option1
+    class ZDiscriminator(nn.Module):
+        def __init__(self, feat_dim):
+            super(ZDiscriminator, self).__init__()
+            self.f_k = nn.Bilinear(feat_dim, feat_dim, 1)
+
+            torch.nn.init.xavier_uniform_(self.f_k.weight)
+            if self.f_k.bias is not None:
+                self.f_k.bias.data.fill_(0.0)
+
+        def forward(self, c, h_pos, h_neg):
+            """
+            c:     (B, F)
+            h_pos: (B, N, F)
+            h_neg: (B, N, F)
+            """
+            # Expand summary vector → (B, N, F)
+            c_expanded = c.unsqueeze(1).expand_as(h_pos)
+
+            sc_pos = self.f_k(h_pos, c_expanded).squeeze(-1)   # (B, N)
+            sc_neg = self.f_k(h_neg, c_expanded).squeeze(-1)   # (B, N)
+
+            # logits = [mean positive score , mean negative score]
+            logits = torch.stack([sc_pos.mean(1), sc_neg.mean(1)], dim=1)
+            return logits
+
+    # Z-Infomax (Ψ) for (B, N, F)
+    class ZInfomax(nn.Module):
+        def __init__(self, feat_dim=args.gen_dim):
+            super(ZInfomax, self).__init__()
+            self.sigm = nn.Sigmoid()
+            self.disc = ZDiscriminator(feat_dim)
+
+        def forward(self, z_pos, z_neg):
+            """
+            z_pos, z_neg: (B, N, F)
+            """
+            # readout = mean over nodes → (B, F)
+            c = z_pos.mean(1)
+            score = self.sigm(c)
+
+            return self.disc(score, z_pos, z_neg)
+
+if args.use_ode_option == "option2":
+    class Decoder(nn.Module):
+        def __init__(self, latent_dim, cate_num, num_nodes):
+            super().__init__()
+            self.latent_dim = latent_dim
+            self.cate_num = cate_num
+            self.num_nodes = num_nodes
+
+            # Node-wise predictor: C → 4 crime categories
+            self.linear = nn.Linear(latent_dim, cate_num)
+
+        def forward(self, Z):
+            """
+            Z: (B, num_nodes * latent_dim)
+            return: (B, num_nodes, cate_num)
+            """
+
+            B = Z.size(0)
+
+            # reshape into per-node latent embeddings
+            Z = Z.reshape(B, self.num_nodes, self.latent_dim)   # (B, N, C_latent)
+
+            # apply node-wise prediction
+            pred = self.linear(Z)       
+
+            return pred
 
 # Global Temporal cnn
 class tem_cnn_global(nn.Module):
@@ -160,11 +239,137 @@ class STHSL(nn.Module):
         self.local_tra = Transform_3d()
         self.global_tra = Transform_3d()
 
+        if args.use_ode_option == "option1":
+            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("ODE option 1 is enabled, STHSL model with option1 components is initialized")
+            # MLP to fuse (local_last + global)
+            self.fusion_mlp = nn.Sequential(
+                nn.Conv3d(2 * args.latdim, args.latdim, kernel_size=1),
+                nn.LeakyReLU(inplace=True),
+                nn.Conv3d(args.latdim, args.gen_dim, kernel_size=1)
+            )
+            
+            # adjacency matric for ODEFunc
+            # Bhavani: check if using inv grad of adj_mx changes peformance
+            # self.inv_grad = utils.graph_grad(adj_mx).transpose(-2, -1)
+            # self.inv_grad[self.inv_grad != 0.] = 0.5
+            adj_mx = utils.build_crime_adj()
+            # print("DEBUG ADJ SHAPE:", adj_mx.shape)
+            self.num_nodes = args.areaNum * args.cateNum
+            
+            # DE-net ODEFunc
+            self.odefunc = ODEFunc(
+                num_units=args.gen_dim,
+                latent_dim=args.gen_dim,
+                adj_mx=adj_mx,
+                gcn_step=args.gcn_step,
+                num_nodes=self.num_nodes,
+                gen_layers=1,
+                nonlinearity='tanh',
+                filter_type="default"
+            )
+            
+            # Diffeq Solver
+            self.de_solver = DiffeqSolver(
+                self.odefunc,
+                method=args.ode_method,
+                latent_dim=args.gen_dim
+            )
+            
+            # Readout to crime prediction
+            self.de_readout = nn.Linear(args.gen_dim, 1)
+
+            # Ψ discriminator acts on Z(t)
+            self.psi = ZInfomax(args.gen_dim)
+
+        elif args.use_ode_option == "option2":
+            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("ODE option 2 is enabled, STHSL model with option2 components is initialized")
+            self.n_traj_samples = int(args.n_traj_samples)
+            self.ode_method = args.ode_method
+            self.atol = float(args.odeint_atol)
+            self.rtol = float(args.odeint_atol)
+            self.gcn_step = int(args.gcn_step)
+            self.filter_type = int(args.filter_type)
+            self.num_gen_layer = int(args.gen_layers)
+            self.ode_gen_dim = int(args.gen_dim)
+            self.num_nodes = int(args.areaNum)
+
+            ####################################################
+            # FUSION PROJECTION MLP
+            ####################################################
+            self.latdim = int(args.latdim)
+            self.fuse_mlp = nn.Sequential(
+                nn.Linear(self.latdim * 2, self.latdim),
+                nn.ReLU(),
+                nn.Linear(self.latdim, self.latdim)
+            )
+
+            ####################################################
+            # DECODER (after ODE evolution)
+            ####################################################
+            self.decoder = Decoder(
+                latent_dim=self.latdim,
+                cate_num=args.cateNum,   # typically 4
+                num_nodes=self.num_nodes
+            )
+
+            ####################################################
+            # ode solver
+            ####################################################
+
+            ode_set_str = "ODE setting --latent {} --samples {} --method {} \
+                --atol {:6f} --rtol {:6f} --gen_layer {} --gen_dim {}".format(\
+                    self.latdim, self.n_traj_samples, self.ode_method, \
+                    self.atol, self.rtol, self.num_gen_layer, self.ode_gen_dim)
+            self.odefunc = ODEFuncDynAdj(
+                self.ode_gen_dim, # hidden dimension
+                self.latdim, 
+                self.gcn_step,
+                self.num_nodes,
+                self.num_gen_layer,
+                filter_type=self.filter_type
+            ).to(args.device)
+            self.diffeq_solver = DiffeqSolver(self.odefunc,
+                self.ode_method, 
+                self.latdim, 
+                odeint_rtol=self.rtol,
+                odeint_atol=self.atol
+            )
+            print(ode_set_str)
+            self.save_latent = bool(args.save_latent)
+            self.latent_feat = None # used to extract the latent feature
+
+            ####################################################
+            # LATENT GRAPH LEARNING FUNCTION
+            ####################################################
+            def compute_latent_graph(self, H, G):
+                # H, G shapes coming into compute_latent_graph:
+                # H: (B, C, Area, Time, Cate)
+                # G: (B, C, Area, Time, Cate)
+
+                # Reduce time+category to pooled representation
+                Hn = H.mean(dim=(3, 4))      # (B, C, Area)
+                Gn = G.mean(dim=(3, 4))      # (B, C, Area)
+
+                # Move feature/channel dim to the end
+                Hn = Hn.permute(0, 2, 1)     # (B, Area, C)
+                Gn = Gn.permute(0, 2, 1)     # (B, Area, C)
+
+                # Compute adjacency
+                A = torch.matmul(Hn, Gn.transpose(1, 2))    # (B, Area, Area)
+
+                return A.detach().cpu().numpy()
+        else:
+            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("ODE is not enabled, baseline STHSL model is initialized")
 
     def forward(self, embeds_true, neg):
         embeds_in_global = self.dimConv_in(embeds_true.unsqueeze(1))
         DGI_neg = self.dimConv_in(neg.unsqueeze(1))
         embeds_in_local = embeds_in_global.permute(0, 3, 1, 2, 4).contiguous().view(-1, args.latdim, args.row, args.col, 4)
+
+        # ====== local pattern spatial and temporal evolution ======
         spa_local1 = self.spa_cnn_local1(embeds_in_local)
         spa_local2 = self.spa_cnn_local2(spa_local1)
         spa_local2 = spa_local2.view(-1, args.temporalRange, args.latdim, args.areaNum, args.cateNum).permute(0, 2, 3, 1, 4)
@@ -174,12 +379,134 @@ class STHSL(nn.Module):
         eb_tra_local = self.local_tra(tem_local2)
         out_local = self.dimConv_local(eb_local).squeeze(1)
 
-        hy_embeds, Infomax_pred = self.Hypergraph_Infomax(embeds_in_global, DGI_neg)
+       # ====== global pattern spatial evolution ======
+        if args.use_ode_option == "baseline":
+            hy_embeds, Infomax_pred = self.Hypergraph_Infomax(embeds_in_global, DGI_neg)
+        elif args.use_ode_option == "option1":
+            hy_embeds = self.Hypergraph_Infomax.encode(embeds_in_global)
+        elif args.use_ode_option == "option2":
+            hy_embeds, Infomax_pred = self.Hypergraph_Infomax(embeds_in_global, DGI_neg)
+        else:
+            raise NotImplementedError("Unknown use_ode_option:", args.use_ode_option)
+
+        # ====== global pattern temporal evolution ======
         tem_global1 = self.tem_cnn_global1(hy_embeds)
         tem_global2 = self.tem_cnn_global2(tem_global1)
         tem_global3 = self.tem_cnn_global3(tem_global2)
         tem_global4 = self.tem_cnn_global4(tem_global3)
         eb_global = tem_global4.squeeze(3)
         eb_tra_global = self.global_tra(tem_global4)
-        out_global = self.dimConv_global(eb_global).squeeze(1)
-        return out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global
+
+        if args.use_ode_option == "baseline":
+            out_global = self.dimConv_global(eb_global).squeeze(1)
+            return out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global
+
+        elif args.use_ode_option == "option1":
+            # ====== FUSION FOR Z0 ======
+            # local last timestep: (B, C, A, 1, K)
+            eb_local_last = eb_tra_local[:, :, :, -1:, :]
+
+            # fusion = concat(local_last, global)
+            fusion = torch.cat([eb_local_last, eb_tra_global], dim=1)
+
+            # (B, C_z, A, 1, K)
+            z0 = self.fusion_mlp(fusion)
+
+            # ====== initial latent state for ODE EVOLUTION ======
+            B, C_z, A, _, K = z0.shape
+            # print("DEBUG z0:", z0.shape, "nodes:", A*K, "expected:", self.num_nodes)
+            # 1) (B, C_z, A, K)
+            z0 = z0.squeeze(3)
+
+            # 2) (B, A, K, C_z)
+            z0 = z0.permute(0, 2, 3, 1).contiguous()
+
+            # 3) (B, A*K, C_z)
+            z0 = z0.reshape(B, A * K, C_z)
+
+            # print("DEBUG Z0 (after reshape):", z0.shape)
+
+            # 4) Flatten for ODEFunc  → (1, B, 256*C_z)
+            z0_flat = z0.reshape(B, -1).unsqueeze(0)
+
+            # time steps for ODE
+            t = torch.tensor([0.0], device=z0.device)
+
+            # Bhavani: old option1 when metrics changed for every run
+            # t = torch.linspace(0, args.horizon, steps=args.horizon+1).to(z0.device)
+
+            # ====== ODE EVOLUTION of crime latent field over time ======
+            sol, _ = self.de_solver(z0_flat, t)
+            Zt = sol[-1, 0].view(B, self.num_nodes, C_z)  # (B, N, C_z)
+
+            # ====== Ψ DISCRIMINATOR ON Z(t) ======
+            idx = torch.randperm(B, device=Zt.device)
+            Zt_neg = Zt[idx].clone()
+            Infomax_pred = self.psi(Zt, Zt_neg)
+
+            # ====== PREDICTION from DE-NET evolved crime flow ======
+            pred_nodes = self.de_readout(Zt)      # (B, N, 1)
+            out_global = pred_nodes.view(B, A, K)
+            return out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, Zt
+
+        elif args.use_ode_option == "option2":
+            # Fix time dimension mismatch in global temporal embedding if any
+            # repeat global embedding across time dimension
+            if eb_tra_global.shape[3] == 1:
+                eb_tra_global = eb_tra_global.repeat(1, 1, 1, args.temporalRange, 1)
+
+            out_global = self.dimConv_global(eb_global).squeeze(1)
+
+            #print("eb_tra_global shape:", eb_tra_global.shape)
+            #print("eb_tra_local shape:", eb_tra_local.shape)
+
+            # ============================================================
+            # LATENT ADJACENCY + FUSION + ODE
+            # ============================================================
+
+            # ---------- STEP 1: Identify local & global embedding ----------
+            # H = eb_tra_local : (B, C, A, T, K)
+            # γ = eb_tra_global: (B, C, A, T, K)
+            # STEP 1: Pool temporal + category
+            H = eb_tra_local.mean(dim=(3,4))   # (B, C, Area)
+            G = eb_tra_global.mean(dim=(3,4))  # (B, C, Area)
+
+            # STEP 2: (B, Area, C)
+            H = H.permute(0, 2, 1)
+            G = G.permute(0, 2, 1)
+
+            # STEP 3: latent adjacency (B, Area, Area)
+            A_latent = torch.matmul(H, G.transpose(1,2))
+            # print("A_latent shape:", A_latent.shape)
+
+            # ---------- STEP 3: Set adjacency inside ODEFunc ----------
+            # Bhavani: check if using inv grad for adjacent matrixchanges peformance
+            # self.inv_grad = utils.graph_grad(adj_mx).transpose(-2, -1)
+            # self.inv_grad[self.inv_grad != 0.] = 0.5
+            self.odefunc.set_adjacency(A_latent.detach())
+
+            # ---------- STEP 4: Fuse H + G to create Zₜ₀ ----------
+            fusion = torch.cat([H, G], dim=-1)       # (B, N, 2C)
+            Z_t0 = self.fuse_mlp(fusion)             # (B, N, C)
+            B = Z_t0.shape[0]
+            # reshape for ODE solver: (n_samples, B, num_nodes * C)
+            Z_t0 = Z_t0.reshape(B, self.num_nodes * self.latdim)
+            Z_t0 = Z_t0.unsqueeze(0).repeat(self.n_traj_samples, 1, 1)
+
+            # ---------- STEP 5: Solve the ODE ----------
+            # Bhavani:end should be args.horizon, should be fixed later
+            time_steps_to_predict = torch.arange(start=0, end=1, step=1).float().to(args.device)
+            time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+            sol_ys, fe = self.diffeq_solver(Z_t0, time_steps_to_predict)
+            # sol_ys: (T, n_samples, B, num_nodes * C)
+
+            # --------- STEP 6: Extract last-step latent state for prediction ----------
+            Z_t = sol_ys[-1]        # (n_samples, B, num_nodes * C)
+            Z_t = Z_t.mean(0)       # (B, num_nodes * C)
+
+            # ---------- STEP 7: Decode Z(t*) to predictions ----------
+            pred = self.decoder(Z_t)   # (B, AreaNum, CateNum)
+
+            return out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, fe, Z_t, pred
+        else:
+            raise NotImplementedError("Unknown use_ode_option:", args.use_ode_option)
