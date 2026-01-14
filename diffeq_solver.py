@@ -8,7 +8,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DiffeqSolver(nn.Module):
     def __init__(self, odefunc, method, latent_dim, 
-            odeint_rtol = 1e-4, odeint_atol = 1e-5):
+            odeint_rtol = 1e-3, odeint_atol = 1e-4):
         nn.Module.__init__(self)
 
         self.ode_method = method

@@ -25,7 +25,7 @@ def parse_metrics_from_file(filepath):
     # Extract Best line
     best_match = re.search(r"Best:(.*)", text)
     if not best_match:
-        print(f"⚠️ No 'Best:' line found in {filepath}")
+        print(f"No 'Best:' line found in {filepath}")
         return {}
 
     metrics_line = best_match.group(1)
@@ -78,12 +78,12 @@ if __name__ == "__main__":
     folder = sys.argv[1]
 
     if not os.path.isdir(folder):
-        print("❌ Folder not found.")
+        print("Folder not found.")
         sys.exit(1)
 
     all_epochs = {}
 
-    print(f"\n📁 Reading folder: {folder}\n")
+    print(f"\n Reading folder: {folder}\n")
 
     for filename in os.listdir(folder):
         if filename.endswith(".txt"):
@@ -107,5 +107,5 @@ if __name__ == "__main__":
     out_path = os.path.join(folder, "metrics_all_epochs_pivot.csv")
     df.to_csv(out_path)
 
-    print(f"\n🎉 Created: {out_path}\n")
+    print(f"\nCreated: {out_path}\n")
     print(df)

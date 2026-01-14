@@ -160,11 +160,13 @@ class ODEFunc(nn.Module):
         x0 = x.permute(1, 2, 0)  # (num_nodes, total_arg_size, batch_size)
         x0 = torch.reshape(x0, shape=[self._num_nodes, input_size * batch_size])
         x = torch.unsqueeze(x0, 0)
-
+        x0_base = x0  # original input
+        
         if self._gcn_step == 0:
             pass
         else:
             for support in self._supports:
+                x0 = x0_base
                 x1 = torch.sparse.mm(support, x0)
                 x = self._concat(x, x1)
 
@@ -241,7 +243,6 @@ class ODEFuncDynAdj(nn.Module):
         if isinstance(A_latent, torch.Tensor):
             if A_latent.dim() == 3:
                 # average adjacency across batch
-                # Bhavani: this needs to be modified later to handle batch adjacencies
                 A_latent = A_latent.mean(dim=0)
 
             # detach so it doesn't require grad, move to CPU for numpy ops
@@ -295,9 +296,9 @@ class ODEFuncDynAdj(nn.Module):
     # Compute gradient for ODE
     # ----------------------------------------------------------------
     def get_ode_gradient_nn(self, t_local, inputs):
-        if(self._filter_type == "unkP"):
+        if(self._filter_type == "0"): #unkP
             grad = self._fc(inputs)
-        elif (self._filter_type == "IncP"):
+        elif (self._filter_type == "1"): # IncP
             grad = - self.ode_func_net(inputs)
         else: # default is diffusion process
             # theta shape: (B, num_nodes * latent_dim)
@@ -331,10 +332,12 @@ class ODEFuncDynAdj(nn.Module):
         inputs = inputs.reshape(batch_size, self._num_nodes, -1)
         x0 = inputs.permute(1, 2, 0).reshape(self._num_nodes, -1)
         x = x0.unsqueeze(0)
+        x0_base = x0  # original input
 
         # multi-step propagation
         if self._gcn_step > 0:
             for support in self._supports:
+                x0 = x0_base
                 x1 = torch.sparse.mm(support, x0)
                 x = torch.cat([x, x1.unsqueeze(0)], dim=0)
 

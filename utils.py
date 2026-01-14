@@ -92,25 +92,6 @@ def create_net(n_inputs, n_outputs, n_layers = 0,
 	layers.append(nn.Linear(n_units, n_outputs))
 	return nn.Sequential(*layers)
 
-# Bhavani: this is needed only if we use this to get 
-# inverse grad of graph gradients in the model
-def graph_grad(adj_mx):
-    """Fetch the graph gradient operator."""
-    num_nodes = adj_mx.shape[0]
-
-    num_edges = (adj_mx > 0.).sum()
-    grad = torch.zeros(num_nodes, num_edges)
-    e = 0
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            if adj_mx[i, j] == 0:
-                continue
-
-            grad[i, e] = 1.
-            grad[j, e] = -1.
-            e += 1
-    return grad
-
 def init_network_weights(net, std = 0.1):
     """
     Just for nn.Linear net.

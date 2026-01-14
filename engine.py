@@ -12,6 +12,9 @@ class trainer():
         self.handler = DataHandler()
         self.model = STHSL()
         self.model.to(device)
+        # Bhavani: Enable debug shapes
+        self.model.debug_shapes = True
+        print("DEBUG SHAPES status:", self.model.debug_shapes)
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         self.loss = utils.cal_loss_r
         self.metrics = utils.cal_metrics_r
@@ -84,14 +87,19 @@ class trainer():
             if args.use_ode_option == "baseline":
                 out_local, eb_local, eb_global, Infomax_pred, out_global = self.model(feats, DGI_feats)
             elif args.use_ode_option == "option1":
-                out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, Zt = self.model(feats, DGI_feats)
+                out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, Z_t = self.model(feats, DGI_feats)
             elif args.use_ode_option == "option2":
-                # Bhavani: end should be args.horizon, should be fixed later
                 out_local, eb_local, eb_global, Infomax_pred, out_global, fe, Z_t, pred = self.model(feats, DGI_feats)
-            
-            # print("Decoder input Z_t shape:", Z_t.shape)
-            # print("Decoder output pred shape:", pred.shape)
-            # print("Labels shape:", labels.shape)
+
+            # ---- Bhavani: DEBUG SHAPE GUARD ----
+            dbg = self.model.debug_shapes and (not hasattr(self, "_dbg_shape_printed"))
+            if dbg:
+                print("Decoder input Z_t shape:", Z_t.shape)
+                if args.use_ode_option == "option2":
+                    print("Decoder output pred shape:", pred.shape)
+                print("Labels shape:", labels.shape)
+                self._dbg_shape_printed = True  # mark printed immediately
+            # -------------------------------------
             out_local = self.handler.zInverse(out_local)
             out_global = self.handler.zInverse(out_global)
 
@@ -303,7 +311,6 @@ def test(model, handler):
             out_local, eb_local, eb_global, DGI_pred, out_global, Zt = model(feats, shuf_feats)
             output = handler.zInverse(out_global)
         elif args.use_ode_option == "option2":
-            # Bhavani:end should be args.horizon, should be fixed later
             out_local, eb_local, eb_global, DGI_pred, out_global, fe, Z_t, pred = model(feats, shuf_feats)
             output = handler.zInverse(pred)
         else:

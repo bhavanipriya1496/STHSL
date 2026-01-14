@@ -33,19 +33,29 @@ def analyze_metrics(csv_path):
     overall_best_count = epoch_score.max()
 
     print("\n==============================")
-    print("🚀 BEST EPOCH PER METRIC")
+    print("BEST EPOCH PER METRIC")
     print("==============================\n")
     print(ranking_df.to_string(index=False))
 
     print("\n==============================")
-    print("🏆 OVERALL BEST EPOCH")
+    print("OVERALL BEST EPOCH")
     print("==============================")
     print(f"Best epoch overall: {overall_best_epoch} (wins {overall_best_count} metrics)\n")
 
     # Save rankings
     out_path = csv_path.replace(".csv", "_ranking.csv")
     ranking_df.to_csv(out_path, index=False)
-    print(f"📄 Saved detailed ranking: {out_path}")
+    print(f"Saved detailed ranking: {out_path}")
+
+    # Save overall best epoch summary
+    summary_path = csv_path.replace(".csv", "_summary.csv")
+    summary_df = pd.DataFrame([{
+        "OverallBestEpoch": int(overall_best_epoch),
+        "WinsCount": int(overall_best_count),
+        "NumMetrics": int(len(ranking_df)),
+    }])
+    summary_df.to_csv(summary_path, index=False)
+    print(f"Saved overall summary: {summary_path}")
 
     return ranking_df, overall_best_epoch
 

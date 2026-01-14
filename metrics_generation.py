@@ -32,13 +32,13 @@ def main():
         "  # Dry run: print evaluation commands without executing\n"
         "  python metrics_generation.py --data CHI --dry-run\n\n"
         "  # Use a specific Python executable (virtualenv / conda)\n"
-        "  python metrics_generation.py --data NYC_SYN --python /usr/bin/python3\n\n"
+        "  python metrics_generation.py --data SYN --python /usr/bin/python3\n\n"
         "EXPECTED CHECKPOINT NAMING:\n"
         "  <save-root>/<data>/*_epoch_<N>_*.pth\n"
         "  Example: Save/CHI/model_epoch_12_best.pth\n"
     ),
 )
-    ap.add_argument("--data", default="CHI", help="Dataset name (e.g., CHI, NYC, NYC_SYN)")
+    ap.add_argument("--data", default="CHI", help="Dataset name (e.g., CHI, NYC, SYN)")
     ap.add_argument("--save-root", default="./Save", help="Root folder that contains <data>/ checkpoints")
     ap.add_argument("--out-dir", default=".", help="Where to write epoch_*_main.txt outputs")
     ap.add_argument("--use_ode_option", default="baseline", help="different model options: baseline, option1, option2")

@@ -13,6 +13,9 @@ def main():
     model.load_state_dict(torch.load(args.checkpoint))
     model.eval()
     print('model load successfully')
+    # Bhavani: Enable debug shapes
+    model.debug_shapes = True
+    print("DEBUG SHAPES status:", model.debug_shapes)
 
     with torch.no_grad():
         reses = test(model, handler)

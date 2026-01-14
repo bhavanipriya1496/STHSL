@@ -238,10 +238,25 @@ class STHSL(nn.Module):
 
         self.local_tra = Transform_3d()
         self.global_tra = Transform_3d()
+        # Bhavani: for debugging shape issues
+        self.debug_shapes = False
 
         if args.use_ode_option == "option1":
-            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("use_ode_option:", args.use_ode_option)
             print("ODE option 1 is enabled, STHSL model with option1 components is initialized")
+            self.latdim = int(args.latdim)
+            self.n_traj_samples = int(args.n_traj_samples)
+            self.ode_method = args.ode_method
+            self.atol = float(args.odeint_atol)
+            self.rtol = float(args.odeint_rtol)
+            self.num_gen_layer = int(args.gen_layers)
+            self.ode_gen_dim = int(args.gen_dim)
+            self.num_nodes = int(args.areaNum)
+            ode_set_str = "ODE setting --latent {} --samples {} --method {} \
+                --atol {:6f} --rtol {:6f} --gen_layer {} --gen_dim {} --num_nodes {}".format(\
+                    self.latdim, self.n_traj_samples, self.ode_method,
+                    self.atol, self.rtol, self.num_gen_layer, self.ode_gen_dim, self.num_nodes)
+            print(ode_set_str)        
             # MLP to fuse (local_last + global)
             self.fusion_mlp = nn.Sequential(
                 nn.Conv3d(2 * args.latdim, args.latdim, kernel_size=1),
@@ -249,12 +264,8 @@ class STHSL(nn.Module):
                 nn.Conv3d(args.latdim, args.gen_dim, kernel_size=1)
             )
             
-            # adjacency matric for ODEFunc
-            # Bhavani: check if using inv grad of adj_mx changes peformance
-            # self.inv_grad = utils.graph_grad(adj_mx).transpose(-2, -1)
-            # self.inv_grad[self.inv_grad != 0.] = 0.5
+            # adjacency matrix for ODEFunc
             adj_mx = utils.build_crime_adj()
-            # print("DEBUG ADJ SHAPE:", adj_mx.shape)
             self.num_nodes = args.areaNum * args.cateNum
             
             # DE-net ODEFunc
@@ -272,8 +283,10 @@ class STHSL(nn.Module):
             # Diffeq Solver
             self.de_solver = DiffeqSolver(
                 self.odefunc,
-                method=args.ode_method,
-                latent_dim=args.gen_dim
+                method=self.ode_method,
+                latent_dim=self.ode_gen_dim,
+                odeint_rtol=self.rtol,
+                odeint_atol=self.atol
             )
             
             # Readout to crime prediction
@@ -283,12 +296,13 @@ class STHSL(nn.Module):
             self.psi = ZInfomax(args.gen_dim)
 
         elif args.use_ode_option == "option2":
-            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("use_ode_option:", args.use_ode_option)
             print("ODE option 2 is enabled, STHSL model with option2 components is initialized")
             self.n_traj_samples = int(args.n_traj_samples)
             self.ode_method = args.ode_method
             self.atol = float(args.odeint_atol)
-            self.rtol = float(args.odeint_atol)
+            self.rtol = float(args.odeint_rtol)
+            self.latdim = int(args.latdim)
             self.gcn_step = int(args.gcn_step)
             self.filter_type = int(args.filter_type)
             self.num_gen_layer = int(args.gen_layers)
@@ -298,7 +312,6 @@ class STHSL(nn.Module):
             ####################################################
             # FUSION PROJECTION MLP
             ####################################################
-            self.latdim = int(args.latdim)
             self.fuse_mlp = nn.Sequential(
                 nn.Linear(self.latdim * 2, self.latdim),
                 nn.ReLU(),
@@ -319,9 +332,9 @@ class STHSL(nn.Module):
             ####################################################
 
             ode_set_str = "ODE setting --latent {} --samples {} --method {} \
-                --atol {:6f} --rtol {:6f} --gen_layer {} --gen_dim {}".format(\
-                    self.latdim, self.n_traj_samples, self.ode_method, \
-                    self.atol, self.rtol, self.num_gen_layer, self.ode_gen_dim)
+                --atol {:6f} --rtol {:6f} --gcnstep {} --filter_type {} --gen_layer {} --gen_dim {}".format(\
+                    self.latdim, self.n_traj_samples, self.ode_method, 
+                    self.atol, self.rtol, self.gcn_step, self.filter_type, self.num_gen_layer, self.ode_gen_dim)
             self.odefunc = ODEFuncDynAdj(
                 self.ode_gen_dim, # hidden dimension
                 self.latdim, 
@@ -361,10 +374,20 @@ class STHSL(nn.Module):
 
                 return A.detach().cpu().numpy()
         else:
-            print("use_ode_option:", args.use_ode_option, type(args.use_ode_option))
+            print("use_ode_option:", args.use_ode_option)
             print("ODE is not enabled, baseline STHSL model is initialized")
 
     def forward(self, embeds_true, neg):
+        # ---- Bhavani: DEBUG SHAPE GUARD ----
+        dbg = self.debug_shapes and (not hasattr(self, "_dbg_args_printed"))
+        if dbg:
+            print("===== TRAINING ARGS =====")
+            for k, v in vars(args).items():
+                print(f"{k}: {v}")
+            print("==========================")
+            self._dbg_args_printed = True  # mark printed immediately
+        # -------------------------------------
+
         embeds_in_global = self.dimConv_in(embeds_true.unsqueeze(1))
         DGI_neg = self.dimConv_in(neg.unsqueeze(1))
         embeds_in_local = embeds_in_global.permute(0, 3, 1, 2, 4).contiguous().view(-1, args.latdim, args.row, args.col, 4)
@@ -429,11 +452,10 @@ class STHSL(nn.Module):
             # 4) Flatten for ODEFunc  → (1, B, 256*C_z)
             z0_flat = z0.reshape(B, -1).unsqueeze(0)
 
-            # time steps for ODE
-            t = torch.tensor([0.0], device=z0.device)
-
-            # Bhavani: old option1 when metrics changed for every run
-            # t = torch.linspace(0, args.horizon, steps=args.horizon+1).to(z0.device)
+            # time steps for ODE evolution
+            # t = torch.arange(start=0, end=1, step=args.horizon).float().to(z0.device)
+            t = torch.linspace(0, 1, steps=args.horizon).to(z0.device)
+            t = t / len(t)
 
             # ====== ODE EVOLUTION of crime latent field over time ======
             sol, _ = self.de_solver(z0_flat, t)
@@ -480,9 +502,6 @@ class STHSL(nn.Module):
             # print("A_latent shape:", A_latent.shape)
 
             # ---------- STEP 3: Set adjacency inside ODEFunc ----------
-            # Bhavani: check if using inv grad for adjacent matrixchanges peformance
-            # self.inv_grad = utils.graph_grad(adj_mx).transpose(-2, -1)
-            # self.inv_grad[self.inv_grad != 0.] = 0.5
             self.odefunc.set_adjacency(A_latent.detach())
 
             # ---------- STEP 4: Fuse H + G to create Zₜ₀ ----------
@@ -494,8 +513,8 @@ class STHSL(nn.Module):
             Z_t0 = Z_t0.unsqueeze(0).repeat(self.n_traj_samples, 1, 1)
 
             # ---------- STEP 5: Solve the ODE ----------
-            # Bhavani:end should be args.horizon, should be fixed later
-            time_steps_to_predict = torch.arange(start=0, end=1, step=1).float().to(args.device)
+            time_steps_to_predict = torch.linspace(0, 1, steps=args.horizon).to(Z_t0.device)
+            # time_steps_to_predict = torch.arange(start=0, end=1, step=args.horizon).float().to(args.device)
             time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
             sol_ys, fe = self.diffeq_solver(Z_t0, time_steps_to_predict)
             # sol_ys: (T, n_samples, B, num_nodes * C)
