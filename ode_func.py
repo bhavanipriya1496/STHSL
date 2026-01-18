@@ -78,7 +78,7 @@ class ODEFunc(nn.Module):
         # biases for latent_dim already created
         
         self._filter_type = filter_type
-        if(self._filter_type == "unkP"):
+        if(self._filter_type == "0"): # unkP
             ode_func_net = utils.create_net(latent_dim, latent_dim, n_units=num_units)
             utils.init_network_weights(ode_func_net)
             self.gradient_net = ode_func_net
@@ -119,9 +119,9 @@ class ODEFunc(nn.Module):
         return grad
     
     def get_ode_gradient_nn(self, t_local, inputs):
-        if(self._filter_type == "unkP"):
+        if(self._filter_type == "0"): #unkP
             grad = self._fc(inputs)
-        elif (self._filter_type == "IncP"):
+        elif (self._filter_type == "1"): # IncP
             grad = - self.ode_func_net(inputs)
         else: # default is diffusion process
             # theta shape: (B, num_nodes * latent_dim)

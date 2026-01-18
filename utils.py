@@ -110,34 +110,33 @@ def calculate_random_walk_matrix(adj_mx):
     random_walk_mx = d_mat_inv.dot(adj_mx).tocoo()
     return random_walk_mx
 
-if args.use_ode_option == "option1":
-    def build_crime_adj():
-        """
-        4-neighbour grid per crime type.
+def build_crime_adj():
+    """
+    4-neighbour grid per crime type.
 
-        Nodes = (region, crime_type).
-        Within each crime type, each region is connected to its
-        4 spatial neighbours. No cross-type edges.
-        """
-        R, C, K = args.row, args.col, args.cateNum
-        A = R * C
-        N = A * K
+    Nodes = (region, crime_type).
+    Within each crime type, each region is connected to its
+    4 spatial neighbours. No cross-type edges.
+    """
+    R, C, K = args.row, args.col, args.cateNum
+    A = R * C
+    N = A * K
 
-        adj = np.zeros((N, N), dtype=np.float32)
+    adj = np.zeros((N, N), dtype=np.float32)
 
-        def idx(r, c, k):
-            return k * A + r * C + c
+    def idx(r, c, k):
+        return k * A + r * C + c
 
-        directions = [(-1,0), (1,0), (0,-1), (0,1)]
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
 
-        for k in range(K):
-            for r in range(R):
-                for c in range(C):
-                    u = idx(r, c, k)
-                    for dr, dc in directions:
-                        rr, cc = r + dr, c + dc
-                        if 0 <= rr < R and 0 <= cc < C:
-                            v = idx(rr, cc, k)
-                            adj[u, v] = 1.0
+    for k in range(K):
+        for r in range(R):
+            for c in range(C):
+                u = idx(r, c, k)
+                for dr, dc in directions:
+                    rr, cc = r + dr, c + dc
+                    if 0 <= rr < R and 0 <= cc < C:
+                        v = idx(rr, cc, k)
+                        adj[u, v] = 1.0
 
-        return adj
+    return adj

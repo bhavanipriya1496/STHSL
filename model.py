@@ -114,81 +114,79 @@ class Hypergraph_Infomax(nn.Module):
         h_neg = self.Hypergraph(eb_neg)
         ret = self.disc(score, h_pos, h_neg)
         return h_pos, ret
-    
-    if args.use_ode_option == "option1":
-        def encode(self, eb):
-            return self.Hypergraph(eb)
 
-if args.use_ode_option == "option1":
-    # Ψ discriminator on Z(t) for option1
-    class ZDiscriminator(nn.Module):
-        def __init__(self, feat_dim):
-            super(ZDiscriminator, self).__init__()
-            self.f_k = nn.Bilinear(feat_dim, feat_dim, 1)
+    def encode(self, eb):
+        return self.Hypergraph(eb)
 
-            torch.nn.init.xavier_uniform_(self.f_k.weight)
-            if self.f_k.bias is not None:
-                self.f_k.bias.data.fill_(0.0)
+# Ψ discriminator on Z(t) for option1
+class ZDiscriminator(nn.Module):
+    def __init__(self, feat_dim):
+        super(ZDiscriminator, self).__init__()
+        self.f_k = nn.Bilinear(feat_dim, feat_dim, 1)
 
-        def forward(self, c, h_pos, h_neg):
-            """
-            c:     (B, F)
-            h_pos: (B, N, F)
-            h_neg: (B, N, F)
-            """
-            # Expand summary vector → (B, N, F)
-            c_expanded = c.unsqueeze(1).expand_as(h_pos)
+        torch.nn.init.xavier_uniform_(self.f_k.weight)
+        if self.f_k.bias is not None:
+            self.f_k.bias.data.fill_(0.0)
 
-            sc_pos = self.f_k(h_pos, c_expanded).squeeze(-1)   # (B, N)
-            sc_neg = self.f_k(h_neg, c_expanded).squeeze(-1)   # (B, N)
+    def forward(self, c, h_pos, h_neg):
+        """
+        c:     (B, F)
+        h_pos: (B, N, F)
+        h_neg: (B, N, F)
+        """
+        # Expand summary vector → (B, N, F)
+        c_expanded = c.unsqueeze(1).expand_as(h_pos)
 
-            # logits = [mean positive score , mean negative score]
-            logits = torch.stack([sc_pos.mean(1), sc_neg.mean(1)], dim=1)
-            return logits
+        sc_pos = self.f_k(h_pos, c_expanded).squeeze(-1)   # (B, N)
+        sc_neg = self.f_k(h_neg, c_expanded).squeeze(-1)   # (B, N)
 
-    # Z-Infomax (Ψ) for (B, N, F)
-    class ZInfomax(nn.Module):
-        def __init__(self, feat_dim=args.gen_dim):
-            super(ZInfomax, self).__init__()
-            self.sigm = nn.Sigmoid()
-            self.disc = ZDiscriminator(feat_dim)
+        # logits = [mean positive score , mean negative score]
+        logits = torch.stack([sc_pos.mean(1), sc_neg.mean(1)], dim=1)
+        return logits
 
-        def forward(self, z_pos, z_neg):
-            """
-            z_pos, z_neg: (B, N, F)
-            """
-            # readout = mean over nodes → (B, F)
-            c = z_pos.mean(1)
-            score = self.sigm(c)
+# Z-Infomax (Ψ) for (B, N, F)
+class ZInfomax(nn.Module):
+    def __init__(self, feat_dim=args.gen_dim):
+        super(ZInfomax, self).__init__()
+        self.sigm = nn.Sigmoid()
+        self.disc = ZDiscriminator(feat_dim)
 
-            return self.disc(score, z_pos, z_neg)
+    def forward(self, z_pos, z_neg):
+        """
+        z_pos, z_neg: (B, N, F)
+        """
+        # readout = mean over nodes → (B, F)
+        c = z_pos.mean(1)
+        score = self.sigm(c)
 
-if args.use_ode_option == "option2":
-    class Decoder(nn.Module):
-        def __init__(self, latent_dim, cate_num, num_nodes):
-            super().__init__()
-            self.latent_dim = latent_dim
-            self.cate_num = cate_num
-            self.num_nodes = num_nodes
+        return self.disc(score, z_pos, z_neg)
 
-            # Node-wise predictor: C → 4 crime categories
-            self.linear = nn.Linear(latent_dim, cate_num)
+# Decoder for option2
+class Decoder(nn.Module):
+    def __init__(self, latent_dim, cate_num, num_nodes):
+        super().__init__()
+        self.latent_dim = latent_dim
+        self.cate_num = cate_num
+        self.num_nodes = num_nodes
 
-        def forward(self, Z):
-            """
-            Z: (B, num_nodes * latent_dim)
-            return: (B, num_nodes, cate_num)
-            """
+        # Node-wise predictor: C → 4 crime categories
+        self.linear = nn.Linear(latent_dim, cate_num)
 
-            B = Z.size(0)
+    def forward(self, Z):
+        """
+        Z: (B, num_nodes * latent_dim)
+        return: (B, num_nodes, cate_num)
+        """
 
-            # reshape into per-node latent embeddings
-            Z = Z.reshape(B, self.num_nodes, self.latent_dim)   # (B, N, C_latent)
+        B = Z.size(0)
 
-            # apply node-wise prediction
-            pred = self.linear(Z)       
+        # reshape into per-node latent embeddings
+        Z = Z.reshape(B, self.num_nodes, self.latent_dim)   # (B, N, C_latent)
 
-            return pred
+        # apply node-wise prediction
+        pred = self.linear(Z)       
+
+        return pred
 
 # Global Temporal cnn
 class tem_cnn_global(nn.Module):
