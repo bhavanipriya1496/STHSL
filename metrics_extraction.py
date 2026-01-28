@@ -42,12 +42,12 @@ def parse_metrics_from_file(filepath):
     for key, value in pairs:
         value = float(value)
 
-        if key in ["RMSE", "MAE", "MAPE"]:
+        if key in ["RMSE", "MAE", "MAPE", "MicroF1", "MacroF1", "AP", "MacroAP_over_categories", "MacroF1_over_categories"]:
             metrics[key] = value
             continue
 
         # Category-based (RMSE_0)
-        m = re.match(r"(RMSE|MAE|MAPE)_([0-9]+)", key)
+        m = re.match(r"(RMSE|MAE|MAPE|F1_cate_|AP_cate)_([0-9]+)", key)
         if m:
             mtype, cid = m.groups()
             cname = CATEGORY_MAP.get(cid, cid)
@@ -55,7 +55,7 @@ def parse_metrics_from_file(filepath):
             continue
 
         # Sparsity-based (RMSE_mask_1)
-        s = re.match(r"(RMSE|MAE|MAPE)_mask_([0-9]+)", key)
+        s = re.match(r"(RMSE|MAE|MAPE|F1|AP)_mask_([0-9]+)", key)
         if s:
             mtype, sid = s.groups()
             sname = SPARSITY_MAP.get(sid, sid)

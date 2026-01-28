@@ -13,7 +13,15 @@ def main():
     train_time = []
     bestRes = None
     eval_bestRes = dict()
-    eval_bestRes['RMSE'], eval_bestRes['MAE'], eval_bestRes['MAPE'] = 1e6, 1e6, 1e6
+    if args.eval_metrics in ("error", "all"):
+        eval_bestRes["RMSE"] = 1e6
+        eval_bestRes["MAE"]  = 1e6
+        eval_bestRes["MAPE"] = 1e6
+    if args.eval_metrics in ("accuracy", "all"):
+        eval_bestRes["MicroF1"] = -1.0
+        eval_bestRes["MacroF1"] = -1.0
+        eval_bestRes["ACC_SCORE"] = -1.0
+
     update = False
 
     for i in range(1, args.epoch+1):
@@ -26,19 +34,56 @@ def main():
         test = (i % args.tstEpoch == 0)
         if test:
             res_eval = engine.eval(True, True)
-            val_metrics = res_eval['RMSE'] + res_eval['MAE']
-            val_best_metrics = eval_bestRes['RMSE'] + eval_bestRes['MAE']
-            if (val_metrics) < (val_best_metrics):
-                print('%s %.4f, %s %.4f' % ('Val metrics decrease from', val_best_metrics, 'to', val_metrics))
-                eval_bestRes['RMSE'] = res_eval['RMSE']
-                eval_bestRes['MAE'] = res_eval['MAE']
-                update = True
+
+            if args.eval_metrics in ("error", "all"):
+                # minimize RMSE+MAE
+                val_metrics = res_eval["RMSE"] + res_eval["MAE"]
+                val_best_metrics = eval_bestRes["RMSE"] + eval_bestRes["MAE"]
+                if val_metrics < val_best_metrics:
+                    print("Val metrics decrease from %.4f to %.4f" % (val_best_metrics, val_metrics))
+                    eval_bestRes["RMSE"] = res_eval["RMSE"]
+                    eval_bestRes["MAE"]  = res_eval["MAE"]
+                    update = True
+
+            elif args.eval_metrics == "accuracy":
+                # maximize MicroF1 + MacroF1
+                micro = res_eval["MicroF1"]
+                macro = res_eval["MacroF1"]
+                val_score = micro + macro
+
+                best_score = eval_bestRes["ACC_SCORE"]
+                if val_score > best_score:
+                    print("Val (MicroF1+MacroF1) increase from %.4f to %.4f" % (best_score, val_score))
+                    eval_bestRes["ACC_SCORE"] = val_score
+                    eval_bestRes["MicroF1"] = micro
+                    eval_bestRes["MacroF1"] = macro
+                    update = True
+
+            else:
+                # none: do not do early stopping updates based on eval metrics
+                pass
+
             reses = engine.eval(False, True)
-            torch.save(engine.model.state_dict(),
-                       args.save + args.data + "/" + "_epoch_" + str(i) + "_MAE_" + str(round(reses['MAE'], 2)) + "_MAPE_" + str(
-                           round(reses['MAPE'], 2)) + ".pth")
+            # Build checkpoint tag depending on available metrics
+            tag_parts = [f"_epoch_{i}"]
+
+            if args.eval_metrics in ("error", "all"):
+                tag_parts.append(f"_MAE_{round(reses['MAE'], 2)}")
+                tag_parts.append(f"_MAPE_{round(reses['MAPE'], 2)}")
+
+            if args.eval_metrics in ("accuracy", "all"):
+                tag_parts.append(f"_MicroF1_{round(reses['MicroF1'], 4)}")
+
+            ckpt_name = "".join(tag_parts) + ".pth"
+
+            torch.save(
+                engine.model.state_dict(),
+                args.save + args.data + "/" + ckpt_name
+            )
             if update:
                 print(makePrint('Test', i, reses))
+                if args.eval_metrics in ("accuracy", "all"):
+                    print(f"MacroF1={reses['MacroF1']:.4f} MicroF1={reses['MicroF1']:.4f} AP={reses['AP']:.4f}")
                 bestRes = reses
                 update = False
         print()

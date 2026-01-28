@@ -34,5 +34,24 @@ def parse_args():
     parser.add_argument('--tstEpoch', default=1, type=int, help='number of epoch to test while training')
     parser.add_argument('--save', type=str, default='./Save/', help='save path')
     parser.add_argument('--checkpoint', type=str, default='./Save/NYC/', help='test path')
+    parser.add_argument(
+    "--eval_metrics",
+    type=str,
+    default="all",
+    choices=["error", "accuracy", "all", "none"],
+    help="Which metrics to compute/print in eval(): "
+         "error=RMSE/MAE/MAPE, accuracy=MacroF1/MicroF1/AP, all=both, none=no metrics")
+    parser.add_argument(
+    "--f1_label_threshold",
+    type=float,
+    default=0.0,
+    help="Binarize ground-truth for F1: label_bin = (label > threshold). Default 0.0"
+    )
+    parser.add_argument(
+    "--f1_pred_threshold",
+    type=float,
+    default=0.0,
+    help="Binarize prediction for F1: pred_bin = (pred > threshold). Default 0.0"
+    )
     return parser.parse_args()
 args = parse_args()
