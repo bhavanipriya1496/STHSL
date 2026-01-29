@@ -5,7 +5,7 @@ import numpy as np
 import utils
 from Params import args
 from DataHandler import DataHandler
-from sklearn.metrics import f1_score, average_precision_score
+from sklearn.metrics import f1_score, average_precision_score, accuracy_score
 
 class trainer():
     def __init__(self, device):
@@ -244,8 +244,23 @@ class trainer():
                             per_mask_labels[k].append(lbl_bin[:, :, c][:, a_mask].reshape(-1))
                             per_mask_preds[k].append(pred_bin[:, :, c][:, a_mask].reshape(-1))
                             per_mask_scores[k].append(scores[:, :, c][:, a_mask].reshape(-1))
+                            # [Bhavani] try this option instead of above 6 lines when GPU execution to see if there's difference
+                            # a_mask = mk[:, c].astype(bool)     # shape: (A,)
 
+                            # # Select exactly the regions belonging to this sparsity-bin for this category
+                            # y_sel = lbl_bin[:, a_mask, c]      # shape: (B, Rk)
+                            # p_sel = pred_bin[:, a_mask, c]
+                            # s_sel = scores[:, a_mask, c]
 
+                            # # Per-mask aggregates (across categories too, by appending category-wise)
+                            # per_mask_labels[k].append(y_sel.reshape(-1))
+                            # per_mask_preds[k].append(p_sel.reshape(-1))
+                            # per_mask_scores[k].append(s_sel.reshape(-1))
+
+                            # # Category × Mask aggregates
+                            # per_cat_mask_labels[(c, k)].append(y_sel.reshape(-1))
+                            # per_cat_mask_preds[(c, k)].append(p_sel.reshape(-1))
+                            # per_cat_mask_scores[(c, k)].append(s_sel.reshape(-1))
 
             if want_error:
                 n_batches += 1
@@ -300,7 +315,8 @@ class trainer():
 
             ret["MacroF1"] = f1_score(labels_flat, preds_flat, average="macro")
             ret["MicroF1"] = f1_score(labels_flat, preds_flat, average="micro")
-            ret["AP"]      = average_precision_score(labels_flat, scores_flat)
+            ret["AP"] = average_precision_score(labels_flat, scores_flat)
+            ret["Acc"] = accuracy_score(labels_flat, preds_flat)
 
             # ---- per-category ----
             for c in range(C):
@@ -309,6 +325,7 @@ class trainer():
                 s = np.concatenate(per_cat_scores[c])
 
                 ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+                ret[f"Acc_cate_{c}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                 ret[f"AP_cate_{c}"] = (
                     average_precision_score(y, s)
                     if np.unique(y).size > 1 else float("nan")
@@ -316,6 +333,7 @@ class trainer():
 
             ret["MacroF1_over_categories"] = np.mean([ret[f"F1_cate_{c}"] for c in range(C)])
             ret["MacroAP_over_categories"] = np.nanmean([ret[f"AP_cate_{c}"] for c in range(C)])
+            ret["MacroAcc_over_categories"] = np.nanmean([ret[f"Acc_cate_{c}"] for c in range(C)])
 
             # ---- sparsity ----
             if isSparsity:
@@ -325,6 +343,7 @@ class trainer():
                     s = np.concatenate(per_mask_scores[k])
 
                     ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+                    ret[f"Acc_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                     ret[f"AP_mask_{k}"] = (
                         average_precision_score(y, s)
                         if np.unique(y).size > 1 else float("nan")
@@ -338,6 +357,7 @@ class trainer():
                         s = np.concatenate(per_cat_mask_scores[(c, k)])
 
                         ret[f"F1_cate_{c}_mask_{k}"] = f1_score(y, p, zero_division=0)
+                        ret[f"Acc_cate_{c}_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                         ret[f"AP_cate_{c}_mask_{k}"] = (
                             average_precision_score(y, s)
                             if np.unique(y).size > 1 else float("nan")
@@ -502,6 +522,24 @@ def test(model, handler):
                     per_mask_preds[k].append(pred_bin[:, :, c][:, a_mask].reshape(-1))
                     per_mask_scores[k].append(scores[:, :, c][:, a_mask].reshape(-1))
 
+                    # [Bhavani] try this option instead of above 6 lines when GPU execution to see if there's difference
+                    # a_mask = mk[:, c].astype(bool)     # shape: (A,)
+
+                    # # Select exactly the regions belonging to this sparsity-bin for this category
+                    # y_sel = lbl_bin[:, a_mask, c]      # shape: (B, Rk)
+                    # p_sel = pred_bin[:, a_mask, c]
+                    # s_sel = scores[:, a_mask, c]
+
+                    # # Per-mask aggregates (across categories too, by appending category-wise)
+                    # per_mask_labels[k].append(y_sel.reshape(-1))
+                    # per_mask_preds[k].append(p_sel.reshape(-1))
+                    # per_mask_scores[k].append(s_sel.reshape(-1))
+
+                    # # Category × Mask aggregates
+                    # per_cat_mask_labels[(c, k)].append(y_sel.reshape(-1))
+                    # per_cat_mask_preds[(c, k)].append(p_sel.reshape(-1))
+                    # per_cat_mask_scores[(c, k)].append(s_sel.reshape(-1))
+
         if want_error:
             _, sqLoss1, absLoss1, tstNums1, apeLoss1, posNums1 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask1)
             _, sqLoss2, absLoss2, tstNums2, apeLoss2, posNums2 = utils.cal_metrics_r_mask(output.cpu().detach().numpy(), labels, mask, handler.mask2)
@@ -550,8 +588,8 @@ def test(model, handler):
 
         ret["MacroF1"] = f1_score(labels_flat, preds_flat, average="macro")
         ret["MicroF1"] = f1_score(labels_flat, preds_flat, average="micro")
-        ret["AP"]      = average_precision_score(labels_flat, scores_flat)
-
+        ret["AP"] = average_precision_score(labels_flat, scores_flat)
+        ret["Acc"] = accuracy_score(labels_flat, preds_flat)
         # ---- per-category ----
         for c in range(C):
             y = np.concatenate(per_cat_labels[c])
@@ -559,6 +597,7 @@ def test(model, handler):
             s = np.concatenate(per_cat_scores[c])
 
             ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+            ret[f"Acc_cate_{c}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
             ret[f"AP_cate_{c}"] = (
                 average_precision_score(y, s)
                 if np.unique(y).size > 1 else float("nan")
@@ -566,6 +605,7 @@ def test(model, handler):
 
         ret["MacroF1_over_categories"] = np.mean([ret[f"F1_cate_{c}"] for c in range(C)])
         ret["MacroAP_over_categories"] = np.nanmean([ret[f"AP_cate_{c}"] for c in range(C)])
+        ret["MacroAcc_over_categories"] = np.nanmean([ret[f"Acc_cate_{c}"] for c in range(C)])
 
         # ---- sparsity ----
         for k in (1, 2, 3, 4):
@@ -574,6 +614,7 @@ def test(model, handler):
             s = np.concatenate(per_mask_scores[k])
 
             ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+            ret[f"Acc_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
             ret[f"AP_mask_{k}"] = (
                 average_precision_score(y, s)
                 if np.unique(y).size > 1 else float("nan")
@@ -587,6 +628,7 @@ def test(model, handler):
                 s = np.concatenate(per_cat_mask_scores[(c, k)])
 
                 ret[f"F1_cate_{c}_mask_{k}"] = f1_score(y, p, zero_division=0)
+                ret[f"Acc_cate_{c}_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                 ret[f"AP_cate_{c}_mask_{k}"] = (
                     average_precision_score(y, s)
                     if np.unique(y).size > 1 else float("nan")
