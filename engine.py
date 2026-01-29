@@ -239,8 +239,6 @@ class trainer():
                             per_cat_mask_labels[(c, k)].append(lbl_bin[:, :, c][:, a_mask].reshape(-1))
                             per_cat_mask_preds[(c, k)].append(pred_bin[:, :, c][:, a_mask].reshape(-1))
                             per_cat_mask_scores[(c, k)].append(scores[:, :, c][:, a_mask].reshape(-1))
-                            # OPTIONAL: if you really want per-mask aggregated across categories,
-                            # keep these (see note below)
                             per_mask_labels[k].append(lbl_bin[:, :, c][:, a_mask].reshape(-1))
                             per_mask_preds[k].append(pred_bin[:, :, c][:, a_mask].reshape(-1))
                             per_mask_scores[k].append(scores[:, :, c][:, a_mask].reshape(-1))

@@ -51,7 +51,7 @@ import torch
 import multiprocessing as mp
 
 # ------------------------------------------------------------
-# IMPORTANT: Your codebase parses argv at import-time in Params.
+# IMPORTANT: Codebase parses argv at import-time in Params.
 # We sanitize argv before importing Params, then restore it.
 # ------------------------------------------------------------
 _ORIG_ARGV = sys.argv.copy()
@@ -131,10 +131,7 @@ def _sample(space: Space, rng: random.Random) -> Dict[str, Any]:
 
 def build_space(arch: str, cpu_only: bool) -> Space:
     """
-    Define your search space here.
-
-    IMPORTANT: This is a generic example space. Ideally you should align keys exactly
-    to your Params/model.py expectations (the same thing you did for Ray).
+    Definition of search space.
     """
     device_choices = ["cpu"] if cpu_only else (["cuda"] if torch.cuda.is_available() else ["cpu"])
 
@@ -151,7 +148,6 @@ def build_space(arch: str, cpu_only: bool) -> Space:
         "dropRateL": ("uniform", 0.0, 0.4),
         "dropRateG": ("uniform", 0.0, 0.3),
 
-        # You mentioned engine.py uses cr and ir, keep them searchable.
         "cr": ("uniform", 0.4, 1.0),
         "ir": ("uniform", 0.5, 2.0),
         "t": ("loguniform", 0.02, 0.2),

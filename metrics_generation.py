@@ -54,7 +54,7 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # collect checkpoints that match your naming convention
+    # collect checkpoints that match the file naming convention
     checkpoints = []
     for p in ckpt_dir.glob(args.pattern):
         if p.is_file() and EPOCH_RE.search(p.name):
@@ -79,7 +79,7 @@ def main():
         if args.dry_run:
             continue
 
-        # run and redirect stdout+stderr into the same file (similar to your shell redirection, but safer)
+        # run and redirect stdout+stderr into the same file
         with out_file.open("w", encoding="utf-8", errors="replace") as f:
             proc = subprocess.run(
                 cmd,
