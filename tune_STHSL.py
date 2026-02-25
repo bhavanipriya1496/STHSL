@@ -45,6 +45,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+import os
+os.environ.setdefault(
+    "PYTORCH_CUDA_ALLOC_CONF",
+    "max_split_size_mb:128,garbage_collection_threshold:0.8"
+)
 
 import numpy as np
 import torch
@@ -95,10 +100,14 @@ def _objective(res_eval: Dict[str, float], mode: str) -> float:
     return float(res_eval.get("RMSE", 1e18) + res_eval.get("MAE", 1e18))
 
 
-def _cleanup_torch() -> None:
+def _cleanup_torch():
+    import gc
+    import torch
+
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
 
 
 # -----------------------------
@@ -139,18 +148,16 @@ def build_space(arch: str, cpu_only: bool) -> Space:
         "use_ode_option": ("choice", [arch], None),
         "device": ("choice", device_choices, None),
 
-        "lr": ("loguniform", 1e-4, 5e-3),
+        "lr": ("loguniform", 1e-5, 2e-4),
         "weight_decay": ("loguniform", 1e-6, 1e-3),
 
-        "batch": ("choice", [8, 16, 32], None),
+        "batch": ("choice", [4, 8, 16], None),
         "latdim": ("choice", [8, 16, 32, 64], None),
 
         "dropRateL": ("uniform", 0.0, 0.4),
         "dropRateG": ("uniform", 0.0, 0.3),
-
         "cr": ("uniform", 0.4, 1.0),
         "ir": ("uniform", 0.5, 2.0),
-        "t": ("loguniform", 0.02, 0.2),
 
         "kernelSize": ("choice", [3, 5], None),
         "hyperNum": ("choice", [64, 128, 256], None),
@@ -159,16 +166,16 @@ def build_space(arch: str, cpu_only: bool) -> Space:
     if arch in ("option1", "option2"):
         spec.update(
             {
-                "n_traj_samples": ("choice", [1, 2, 4], None),
+                "n_traj_samples": ("choice", [1, 2], None),
                 "ode_method": ("choice", ["euler", "rk4", "dopri5"], None),
-                "odeint_atol": ("loguniform", 1e-6, 1e-3),
-                "odeint_rtol": ("loguniform", 1e-6, 1e-3),
+                "odeint_atol": ("loguniform", 1e-2, 1e-3),
+                "odeint_rtol": ("loguniform", 1e-2, 1e-3),
 
-                "gen_layers": ("choice", [1, 2, 3], None),
+                "gen_layers": ("choice", [1, 2], None),
                 "gen_dim": ("choice", [32, 64, 128], None),
 
-                "gcn_step": ("choice", [1, 2, 3], None),
-                "horizon": ("choice", [6, 12, 24], None),
+                "gcn_step": ("choice", [1, 2], None),
+                "horizon": ("choice", [6, 12], None),
             }
         )
 
@@ -222,78 +229,92 @@ def run_one_trial(
 
     # Build trainer AFTER args set (so it reads correct values)
     device = torch.device(getattr(args, "device", "cuda" if torch.cuda.is_available() else "cpu"))
-    eng = trainer(device)
 
-    best_val_obj = float("inf")
-    best_epoch = -1
-    best_val: Dict[str, float] = {}
-    best_test: Dict[str, float] = {}
-    last_train_loss = math.nan
+    eng = None
 
-    t0 = time.time()
-    for ep in range(1, max_epochs + 1):
-        _, train_loss = eng.train()
-        last_train_loss = float(train_loss)
+    try:
+        eng = trainer(device)
 
-        if ep % eval_every == 0:
-            res_val = eng.eval(True, True)
-            res_test = eng.eval(False, True)
+        best_val_obj = float("inf")
+        best_epoch = -1
+        best_val: Dict[str, float] = {}
+        best_test: Dict[str, float] = {}
+        last_train_loss = math.nan
 
-            val_obj = _objective(res_val, objective)
-            if val_obj < best_val_obj:
-                best_val_obj = float(val_obj)
-                best_epoch = int(ep)
-                best_val = dict(res_val)
-                best_test = dict(res_test)
-                
-                ckpt_dir = Path(args.save) / args.data
-                ckpt_dir.mkdir(parents=True, exist_ok=True)
+        t0 = time.time()
+        for ep in range(1, max_epochs + 1):
+            _, train_loss = eng.train()
+            last_train_loss = float(train_loss)
 
-                torch.save(
-                    eng.model.state_dict(),
-                    ckpt_dir / f"_epoch_{ep}_VALOBJ_{best_val_obj:.6f}.pth"
-                )
-                
-                # write best.json
-                (run_path / "best.json").write_text(
-                    json.dumps(
-                        {
-                            "trial_id": trial_id,
-                            "best_epoch": best_epoch,
-                            "best_val_obj": best_val_obj,
-                            "best_val_metrics": best_val,
-                            "best_test_metrics": best_test,
-                            "config": cfg,
-                        },
-                        indent=2,
-                    ),
-                    encoding="utf-8",
-                )
+            if ep % eval_every == 0:
+                res_val = eng.eval(True, True)
+                res_test = eng.eval(False, True)
 
-    elapsed_s = time.time() - t0
+                val_obj = _objective(res_val, objective)
+                if val_obj < best_val_obj:
+                    best_val_obj = float(val_obj)
+                    best_epoch = int(ep)
+                    best_val = dict(res_val)
+                    best_test = dict(res_test)
 
-    result = {
-        "trial_id": trial_id,
-        "dry_run": False,
-        "seed": seed,
-        "best_epoch": best_epoch,
-        "best_val_obj": best_val_obj,
-        "best_val_RMSE": float(best_val.get("RMSE", math.nan)),
-        "best_val_MAE": float(best_val.get("MAE", math.nan)),
-        "best_val_MAPE": float(best_val.get("MAPE", math.nan)),
-        "best_test_RMSE": float(best_test.get("RMSE", math.nan)),
-        "best_test_MAE": float(best_test.get("MAE", math.nan)),
-        "best_test_MAPE": float(best_test.get("MAPE", math.nan)),
-        "last_train_loss": float(last_train_loss),
-        "elapsed_s": float(elapsed_s),
-        "config": cfg,
-    }
+                    ckpt_dir = Path(args.save) / args.data
+                    ckpt_dir.mkdir(parents=True, exist_ok=True)
 
-    (run_path / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                    torch.save(
+                        eng.model.state_dict(),
+                        ckpt_dir / f"_epoch_{ep}_VALOBJ_{best_val_obj:.6f}.pth"
+                    )
 
-    del eng
-    _cleanup_torch()
-    return result
+                    (run_path / "best.json").write_text(
+                        json.dumps(
+                            {
+                                "trial_id": trial_id,
+                                "best_epoch": best_epoch,
+                                "best_val_obj": best_val_obj,
+                                "best_val_metrics": best_val,
+                                "best_test_metrics": best_test,
+                                "config": cfg,
+                            },
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+
+        elapsed_s = time.time() - t0
+
+        result = {
+            "trial_id": trial_id,
+            "dry_run": False,
+            "seed": seed,
+            "best_epoch": best_epoch,
+            "best_val_obj": best_val_obj,
+            "best_val_RMSE": float(best_val.get("RMSE", math.nan)),
+            "best_val_MAE": float(best_val.get("MAE", math.nan)),
+            "best_val_MAPE": float(best_val.get("MAPE", math.nan)),
+            "best_test_RMSE": float(best_test.get("RMSE", math.nan)),
+            "best_test_MAE": float(best_test.get("MAE", math.nan)),
+            "best_test_MAPE": float(best_test.get("MAPE", math.nan)),
+            "last_train_loss": float(last_train_loss),
+            "elapsed_s": float(elapsed_s),
+            "config": cfg,
+        }
+
+        (run_path / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return result
+
+    finally:
+        try:
+            if eng is not None and hasattr(eng, "model"):
+                eng.model = None
+        except Exception:
+            pass
+
+        try:
+            del eng
+        except Exception:
+            pass
+
+        _cleanup_torch()
 
 
 def _trial_worker(payload: Tuple[str, Dict[str, Any], str, int, int, str, int]) -> Dict[str, Any]:

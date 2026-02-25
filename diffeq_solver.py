@@ -3,6 +3,7 @@ import torch.nn as nn
 import time 
 
 from torchdiffeq import odeint
+#from torchdiffeq import odeint_adjoint as odeint
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -1,22 +1,35 @@
+import os
 import torch
 import numpy as np
 import time
+
 from engine import trainer
 from Params import args
 from utils import seed_torch, makePrint
 
-def main():
-    seed_torch()
-    device = torch.device('cpu')
+
+def run_one_seed(seed: int):
+    """
+    Runs a full training loop for a single seed and saves checkpoints into:
+      {args.save}/{args.data}/seed_{seed}/
+    """
+    seed_torch(seed)
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     engine = trainer(device)
+
+    print(f"\n===== SEED {seed} =====", flush=True)
     print("start training...", flush=True)
+
     train_time = []
     bestRes = None
     eval_bestRes = dict()
+
     if args.eval_metrics in ("error", "all"):
         eval_bestRes["RMSE"] = 1e6
         eval_bestRes["MAE"]  = 1e6
         eval_bestRes["MAPE"] = 1e6
+
     if args.eval_metrics in ("accuracy", "all"):
         eval_bestRes["MicroF1"] = -1.0
         eval_bestRes["MacroF1"] = -1.0
@@ -24,11 +37,19 @@ def main():
 
     update = False
 
-    for i in range(1, args.epoch+1):
+    # Save checkpoints under a per-seed folder (prevents overwriting across seeds)
+    seed_dir = os.path.join(args.save, args.data, f"seed_{seed}")
+    os.makedirs(seed_dir, exist_ok=True)
+
+    for i in range(1, args.epoch + 1):
         t1 = time.time()
+
         metrics, metrics1 = engine.train()
+
         print(f'Epoch {i:2d} Training Time {time.time() - t1:.3f}s')
-        ret = 'Epoch %d/%d, %s %.4f,  %s %.4f' % (i, args.epoch, 'Train Loss = ', metrics, 'preLoss = ', metrics1)
+        ret = 'Epoch %d/%d, %s %.4f,  %s %.4f' % (
+            i, args.epoch, 'Train Loss = ', metrics, 'preLoss = ', metrics1
+        )
         print(ret)
 
         test = (i % args.tstEpoch == 0)
@@ -64,8 +85,10 @@ def main():
                 pass
 
             reses = engine.eval(False, True)
+
             # Build checkpoint tag depending on available metrics
-            tag_parts = [f"_epoch_{i}"]
+            # add seed into checkpoint name
+            tag_parts = [f"_seed_{seed}", f"_epoch_{i}"]
 
             if args.eval_metrics in ("error", "all"):
                 tag_parts.append(f"_MAE_{round(reses['MAE'], 2)}")
@@ -76,20 +99,38 @@ def main():
 
             ckpt_name = "".join(tag_parts) + ".pth"
 
-            torch.save(
-                engine.model.state_dict(),
-                args.save + args.data + "/" + ckpt_name
-            )
+            torch.save(engine.model.state_dict(), os.path.join(seed_dir, ckpt_name))
+
             if update:
                 print(makePrint('Test', i, reses))
                 if args.eval_metrics in ("accuracy", "all"):
                     print(f"MacroF1={reses['MacroF1']:.4f} MicroF1={reses['MicroF1']:.4f} AP={reses['AP']:.4f}")
                 bestRes = reses
                 update = False
+
         print()
         t2 = time.time()
-        train_time.append(t2-t1)
+        train_time.append(t2 - t1)
+
     print(makePrint('Best', args.epoch, bestRes))
+    return bestRes
+
+
+def main():
+    # Option 1: if there is added args.seeds in Params.py, this will use it.
+    # Option 2: otherwise fallback to a default list.
+    seeds = getattr(args, "seeds", None)
+    if seeds is None:
+        seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    all_best = {}
+    for s in seeds:
+        all_best[int(s)] = run_one_seed(int(s))
+
+    print("\n===== SUMMARY: best result per seed =====")
+    for s in sorted(all_best.keys()):
+        print(f"seed={s}: {all_best[s]}")
+
 
 if __name__ == "__main__":
     t1 = time.time()

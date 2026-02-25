@@ -8,7 +8,7 @@ def parse_args():
     parser.add_argument('--ir', default=1, type=float, help='infomax loss rate')
     parser.add_argument('--t', default=0.05, type=float, help='temperature')
     parser.add_argument('--batch', default=16, type=int, help='batch size')
-    parser.add_argument('--epoch', default=5, type=int, help='number of epochs')
+    parser.add_argument('--epoch', default=10, type=int, help='number of epochs')
     parser.add_argument('--latdim', default=16, type=int, help='embedding size')
     parser.add_argument('--temporalRange', default=30, type=int, help='number of hops for temporal features')
     parser.add_argument('--cateNum', default=4, type=int, help='number of categories')
@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--rnn_units', default=64, type=int, help='number of rnn units')
     parser.add_argument('--horizon', default=12, type=int, help='prediction horizon')
     parser.add_argument('--filter_type', default=2, type=int, help='filter type')
-    parser.add_argument('--device', type=str, default='cpu', help='cuda device')
+    parser.add_argument('--device', type=str, default='cuda', help='cuda device')
     parser.add_argument('--tstEpoch', default=1, type=int, help='number of epoch to test while training')
     parser.add_argument('--save', type=str, default='./Save/', help='save path')
     parser.add_argument('--checkpoint', type=str, default='./Save/NYC/', help='test path')
@@ -53,5 +53,6 @@ def parse_args():
     default=0.0,
     help="Binarize prediction for F1: pred_bin = (pred > threshold). Default 0.0"
     )
+    parser.add_argument("--seeds", nargs="+", type=int, default=[0,1,2,3,4,5,6,7,8,9])
     return parser.parse_args()
 args = parse_args()

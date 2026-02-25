@@ -28,7 +28,6 @@ class LayerParams:
             self._biases_dict[length] = biases
             self._rnn_network.register_parameter('{}_biases_{}'.format(self._type, str(length)),
                                                  biases)
-
         return self._biases_dict[length]
 
 class ODEFunc(nn.Module):
@@ -73,6 +72,11 @@ class ODEFunc(nn.Module):
         self._gconv_params.get_weights((in_lat, self._num_units))
         self._gconv_params.get_biases(self._num_units)
 
+        # (2b) for deeper gen_layers: _gconv(c(num_units), num_units)
+        # this is needed when gen_layers >= 2
+        self._gconv_params.get_weights((in_units, self._num_units))
+        self._gconv_params.get_biases(self._num_units)
+
         # (3) for _gconv(c, latent_dim) at end of gen_layers
         self._gconv_params.get_weights((in_units, self._latent_dim))
         # biases for latent_dim already created
@@ -92,7 +96,7 @@ class ODEFunc(nn.Module):
             
             for support in supports:
                 self._supports.append(self._build_sparse_matrix(support))
-    
+
     @staticmethod
     def _build_sparse_matrix(L):
         L = L.tocoo()
@@ -114,10 +118,14 @@ class ODEFunc(nn.Module):
         """
         self.nfe += 1
         grad = self.get_ode_gradient_nn(t_local, y)
+        # Smoothning the gradients so it does not explode
+        # grad = grad - 0.5 * y # damping
+        grad = torch.tanh(grad) # bounded in [-1, 1] for smoothing
+        # grad = torch.clamp(grad, -5.0, 5.0) # clamping
         if backwards:
             grad = -grad
         return grad
-    
+
     def get_ode_gradient_nn(self, t_local, inputs):
         if(self._filter_type == "0"): #unkP
             grad = self._fc(inputs)
@@ -127,6 +135,7 @@ class ODEFunc(nn.Module):
             # theta shape: (B, num_nodes * latent_dim)
             theta = torch.sigmoid(self._gconv(inputs, self._latent_dim, bias_start=1.0)) 
             grad = - theta * self.ode_func_net(inputs)
+            grad = torch.tanh(grad) # bounded in [-1, 1] for smoothing
         return grad
 
     def ode_func_net(self, inputs):
@@ -167,6 +176,7 @@ class ODEFunc(nn.Module):
         else:
             for support in self._supports:
                 x0 = x0_base
+                support = support.to(device=x0.device, dtype=x0.dtype)
                 x1 = torch.sparse.mm(support, x0)
                 x = self._concat(x, x1)
 
@@ -227,6 +237,11 @@ class ODEFuncDynAdj(nn.Module):
         self._gconv_params.get_weights((in_lat, self._num_units))
         self._gconv_params.get_biases(self._num_units)
 
+        # (2b) for deeper gen_layers: _gconv(c(num_units), num_units)
+        # this is needed when gen_layers >= 2
+        self._gconv_params.get_weights((in_units, self._num_units))
+        self._gconv_params.get_biases(self._num_units)
+
         # (3) for _gconv(c, latent_dim) at end of gen_layers
         self._gconv_params.get_weights((in_units, self._latent_dim))
         # biases for latent_dim already created
@@ -267,10 +282,11 @@ class ODEFuncDynAdj(nn.Module):
     @staticmethod
     def _build_sparse_matrix(L):
         L = L.tocoo()
-        idx = np.column_stack((L.row, L.col))
+        indices = np.column_stack((L.row, L.col))
         # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
-        idx = idx[np.lexsort((idx[:, 0], idx[:, 1]))]
-        return torch.sparse_coo_tensor(idx.T, L.data, L.shape, device=device)
+        indices = indices[np.lexsort((indices[:, 0], indices[:, 1]))]
+        L = torch.sparse_coo_tensor(indices.T, L.data, L.shape, device=device)
+        return L
 
     # ----------------------------------------------------------------
     # FORWARD: essential ODE function (computes dZ/dt)
@@ -287,14 +303,15 @@ class ODEFuncDynAdj(nn.Module):
         """
         self.nfe += 1
         grad = self.get_ode_gradient_nn(t_local, y)
+        # Smoothning the gradients so it does not explode
+        # grad = grad - 0.5 * y # damping
+        grad = torch.tanh(grad) # bounded in [-1, 1] for smoothing
+        # grad = torch.clamp(grad, -5.0, 5.0) # clamping
+
         if backwards:
             grad = -grad
         return grad
 
-
-    # ----------------------------------------------------------------
-    # Compute gradient for ODE
-    # ----------------------------------------------------------------
     def get_ode_gradient_nn(self, t_local, inputs):
         if(self._filter_type == "0"): #unkP
             grad = self._fc(inputs)
@@ -304,6 +321,7 @@ class ODEFuncDynAdj(nn.Module):
             # theta shape: (B, num_nodes * latent_dim)
             theta = torch.sigmoid(self._gconv(inputs, self._latent_dim, bias_start=1.0)) 
             grad = - theta * self.ode_func_net(inputs)
+            grad = torch.tanh(grad) # bounded in [-1, 1] for smoothing
         return grad
 
     # ODE NN model
@@ -338,6 +356,7 @@ class ODEFuncDynAdj(nn.Module):
         if self._gcn_step > 0:
             for support in self._supports:
                 x0 = x0_base
+                support = support.to(device=x0.device, dtype=x0.dtype)
                 x1 = torch.sparse.mm(support, x0)
                 x = torch.cat([x, x1.unsqueeze(0)], dim=0)
 

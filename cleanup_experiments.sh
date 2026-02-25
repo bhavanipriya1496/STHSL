@@ -81,9 +81,18 @@ rm_epoch_inside() {
     return 0
   fi
 
-  shopt -s nullglob
-  local matches=("$dir"/_epoch*)
-  shopt -u nullglob
+shopt -s nullglob
+
+# legacy checkpoints directly under Save/<ds>/
+local epoch_matches=("$dir"/_epoch*)
+
+# new layout: seed folders under Save/<ds>/
+local seed_matches=("$dir"/seed_*)
+
+shopt -u nullglob
+
+# combine into one list
+local matches=("${epoch_matches[@]}" "${seed_matches[@]}")
 
   if (( ${#matches[@]} == 0 )); then
     echo "NO-MATCH: $dir/_epoch*"

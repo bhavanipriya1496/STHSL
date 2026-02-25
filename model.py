@@ -6,6 +6,19 @@ from ode_func import ODEFuncDynAdj
 from diffeq_solver import DiffeqSolver
 import utils
 
+def _chk(name, x):
+    if not torch.isfinite(x).all():
+        bad = (~torch.isfinite(x)).sum().item()
+        print(f"[NON-FINITE] {name}: shape={tuple(x.shape)} dtype={x.dtype} bad={bad}")
+        # Show a few bad values
+        flat = x.reshape(-1)
+        idx = (~torch.isfinite(flat)).nonzero(as_tuple=False).squeeze()[:10]
+        print(" sample bad values:", flat[idx])
+        # Show finite range too
+        xn = torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+        print(" finite min/max:", xn.min().item(), xn.max().item())
+        raise RuntimeError(f"Non-finite in {name}")
+
 # Local
 # Local Spatial cnn
 class spa_cnn_local(nn.Module):
@@ -491,6 +504,9 @@ class STHSL(nn.Module):
             H = eb_tra_local.mean(dim=(3,4))   # (B, C, Area)
             G = eb_tra_global.mean(dim=(3,4))  # (B, C, Area)
 
+            # _chk("H_before_matmul", H)
+            # _chk("G_before_matmul", G)
+
             # STEP 2: (B, Area, C)
             H = H.permute(0, 2, 1)
             G = G.permute(0, 2, 1)
@@ -499,21 +515,32 @@ class STHSL(nn.Module):
             A_latent = torch.matmul(H, G.transpose(1,2))
             # print("A_latent shape:", A_latent.shape)
 
+            # _chk("A_latent_before_set", A_latent)
             # ---------- STEP 3: Set adjacency inside ODEFunc ----------
             self.odefunc.set_adjacency(A_latent.detach())
 
             # ---------- STEP 4: Fuse H + G to create Zₜ₀ ----------
             fusion = torch.cat([H, G], dim=-1)       # (B, N, 2C)
+            # _chk("H", H)
+            # _chk("G", G)
+            # _chk("fusion", fusion)
+            
             Z_t0 = self.fuse_mlp(fusion)             # (B, N, C)
+            # _chk("Z_t0_after_fuse_mlp", Z_t0)
+            
             B = Z_t0.shape[0]
             # reshape for ODE solver: (n_samples, B, num_nodes * C)
             Z_t0 = Z_t0.reshape(B, self.num_nodes * self.latdim)
+            # _chk("Z_t0_after_reshape", Z_t0)
             Z_t0 = Z_t0.unsqueeze(0).repeat(self.n_traj_samples, 1, 1)
+            # _chk("Z_t0_after_repeat", Z_t0)
 
             # ---------- STEP 5: Solve the ODE ----------
             time_steps_to_predict = torch.linspace(0, 1, steps=args.horizon).to(Z_t0.device)
             # time_steps_to_predict = torch.arange(start=0, end=1, step=args.horizon).float().to(args.device)
             time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+            # _chk("time_steps", time_steps_to_predict)
+
             sol_ys, fe = self.diffeq_solver(Z_t0, time_steps_to_predict)
             # sol_ys: (T, n_samples, B, num_nodes * C)
 
@@ -523,6 +550,7 @@ class STHSL(nn.Module):
 
             # ---------- STEP 7: Decode Z(t*) to predictions ----------
             pred = self.decoder(Z_t)   # (B, AreaNum, CateNum)
+            # pred = torch.nan_to_num(pred, nan=0.0, posinf=0.0, neginf=0.0)
 
             return out_local, eb_tra_local, eb_tra_global, Infomax_pred, out_global, fe, Z_t, pred
         else:

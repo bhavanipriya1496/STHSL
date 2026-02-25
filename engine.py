@@ -61,7 +61,7 @@ class trainer():
     def train(self):
         self.model.train()
         ids = np.random.permutation(list(range(args.temporalRange, args.trnDays)))
-        epochLoss, epochPreLoss, epochAcc = [0] * 3
+        epochLoss, epochPreLoss, epochAcc =  0.0, 0.0, 0.0
         num = len(ids)
         steps = int(np.ceil(num / args.batch))
         for i in range(steps):
@@ -70,14 +70,14 @@ class trainer():
             batIds = ids[st: ed]
             bt = ed - st
             if args.use_ode_option in ("baseline", "option2"):
-                Infomax_L1 = torch.ones(bt, args.offNum, args.areaNum)
-                Infomax_L2 = torch.zeros(bt, args.offNum, args.areaNum)
-                Infomax_labels = torch.Tensor(torch.cat((Infomax_L1, Infomax_L2), -1)).to(args.device)
+                Infomax_L1 = torch.ones(bt, args.offNum, args.areaNum, device=args.device)
+                Infomax_L2 = torch.zeros(bt, args.offNum, args.areaNum, device=args.device)
+                Infomax_labels = torch.cat((Infomax_L1, Infomax_L2), -1)
 
             tem = self.sampleTrainBatch(batIds, st, ed)
             feats, labels, mask = tem
             mask = torch.Tensor(mask).to(args.device)
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
 
             idx = np.random.permutation(args.areaNum)
             DGI_feats = torch.Tensor(feats[:, idx, :, :]).to(args.device)
@@ -119,9 +119,9 @@ class trainer():
             loss.backward()
             self.optimizer.step()
             print('Step %d/%d: preLoss = %.4f         ' % (i, steps, loss), end='\r')
-            epochLoss += loss
+            epochLoss += float(loss.item())
         epochLoss = epochLoss / steps
-        return epochLoss, loss.item()
+        return epochLoss, float(loss.item())
 
 
     def eval(self, iseval, isSparsity):
@@ -136,7 +136,7 @@ class trainer():
             ids = np.array(list(range(self.handler.valT.shape[1])))
         else:
             ids = np.array(list(range(self.handler.tstT.shape[1])))
-        epochLoss, epochPreLoss, = [0] * 2
+        epochLoss, epochPreLoss, = 0.0, 0.0
 
         num = len(ids)
         if isSparsity:
@@ -268,7 +268,7 @@ class trainer():
                 epochTstNum += tstNums
                 epochApeLoss += apeLoss
                 epochPosNums += posNums
-                epochLoss += loss
+                epochLoss += float(loss.item())
                 print('Step %d/%d: loss = %.2f, regLoss = %.2f         ' % (i, steps, loss, loss), end='\r')
 
                 if isSparsity:
@@ -429,7 +429,7 @@ def test(model, handler):
         want_error = False
         want_acc = False
     ids = np.array(list(range(handler.tstT.shape[1])))
-    epochLoss, epochPreLoss, = [0] * 2
+    epochLoss, epochPreLoss, = 0.0, 0.0
     epochSqLoss1, epochAbsLoss1, epochTstNum1, epochApeLoss1, epochPosNums1 = [np.zeros(4) for i in range(5)]
     epochSqLoss2, epochAbsLoss2, epochTstNum2, epochApeLoss2, epochPosNums2 = [np.zeros(4) for i in range(5)]
     epochSqLoss3, epochAbsLoss3, epochTstNum3, epochApeLoss3, epochPosNums3 = [np.zeros(4) for i in range(5)]
@@ -575,7 +575,7 @@ def test(model, handler):
             epochApeLoss += apeLoss
             epochPosNums += posNums
 
-            epochLoss += loss
+            epochLoss += float(loss.item())
             print('Step %d/%d: loss = %.2f, regLoss = %.2f         ' % (i, steps, loss, loss), end='\r')
     ret = dict()
 
@@ -583,6 +583,7 @@ def test(model, handler):
         labels_flat = np.concatenate(all_labels)
         preds_flat  = np.concatenate(all_preds)
         scores_flat = np.concatenate(all_scores)
+        # scores_flat = np.nan_to_num(scores_flat, nan=0.0, posinf=1.0, neginf=0.0)
 
         ret["MacroF1"] = f1_score(labels_flat, preds_flat, average="macro")
         ret["MicroF1"] = f1_score(labels_flat, preds_flat, average="micro")

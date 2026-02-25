@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from Params import args
 import random
+import os
 
 def cal_loss_r(preds, labels, mask):
     loss = torch.sum(torch.square(preds - labels) * mask) / torch.sum(mask)
@@ -65,13 +66,19 @@ def infoNCEloss(q, k):
     denominator = neg + pos
     return torch.mean(-torch.log(torch.div(pos, denominator)))
 
-
-def seed_torch(seed=523):
+def seed_torch(seed: int = 523):
     random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def makePrint(name, ep, reses):
     ret = 'Epoch %d/%d, %s: ' % (ep, args.epoch, name)
