@@ -1,5 +1,4 @@
 import argparse
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Model Params')
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
@@ -30,7 +29,7 @@ def parse_args():
     parser.add_argument('--rnn_units', default=64, type=int, help='number of rnn units')
     parser.add_argument('--horizon', default=12, type=int, help='prediction horizon')
     parser.add_argument('--filter_type', default=2, type=int, help='filter type')
-    parser.add_argument('--device', type=str, default='cuda', help='cuda device')
+    parser.add_argument('--device', type=str, default='cpu', help='cuda device')
     parser.add_argument('--tstEpoch', default=1, type=int, help='number of epoch to test while training')
     parser.add_argument('--save', type=str, default='./Save/', help='save path')
     parser.add_argument('--checkpoint', type=str, default='./Save/NYC/', help='test path')

@@ -10,6 +10,12 @@ class DataHandler:
             predir = 'Datasets/CHI_crime/'
         elif args.data == 'SYN':
             predir = 'Datasets/SYN/'
+        elif args.data == 'SEA':
+            predir = 'Datasets/SEA_crime/'
+        elif args.data == 'LA':
+            predir = 'Datasets/LA_crime/'
+        elif args.data == 'NEW_CHI':
+            predir = 'Datasets/NEW_CHI_crime/'
         else:
             predir = None
         self.predir = predir
