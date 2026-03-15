@@ -1,0 +1,83 @@
+{
+    "created_at": "2026-03-15T18:03:28.824912",
+    "source_csv": "NYC_Crime.csv",
+    "offense_map": {
+        "BURGLARY": 0,
+        "ROBBERY": 1,
+        "GRAND LARCENY": 2,
+        "FELONY ASSAULT": 3
+    },
+    "id_to_offense": {
+        "0": "BURGLARY",
+        "1": "ROBBERY",
+        "2": "GRAND LARCENY",
+        "3": "FELONY ASSAULT"
+    },
+    "raw_offense_counts": {
+        "BURGLARY": 31799,
+        "ROBBERY": 33453,
+        "GRAND LARCENY": 85899,
+        "FELONY ASSAULT": 40429
+    },
+    "num_events": 191580,
+    "time_range": {
+        "min": "2014-01-01 00:00:00",
+        "max": "2015-12-31 23:18:00"
+    },
+    "spatial_bounds": {
+        "min_lat": 40.5002159760001,
+        "max_lat": 40.912723396,
+        "min_lon": -74.253109964,
+        "max_lon": -73.7009566
+    },
+    "grid": {
+        "lat_cells": 10,
+        "lon_cells": 10,
+        "cell_km": 5
+    },
+    "tensor_shapes": {
+        "train": [
+            10,
+            10,
+            638,
+            4
+        ],
+        "val": [
+            10,
+            10,
+            31,
+            4
+        ],
+        "test": [
+            10,
+            10,
+            61,
+            4
+        ]
+    },
+    "split_event_counts": {
+        "train": 167633,
+        "val": 8530,
+        "test": 15417
+    },
+    "split_class_counts": {
+        "train": [
+            27882.0,
+            28860.0,
+            75298.0,
+            35593.0
+        ],
+        "val": [
+            1371.0,
+            1557.0,
+            3888.0,
+            1714.0
+        ],
+        "test": [
+            2546.0,
+            3036.0,
+            6713.0,
+            3122.0
+        ]
+    }
+}

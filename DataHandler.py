@@ -6,16 +6,22 @@ class DataHandler:
     def __init__(self):
         if args.data == 'NYC':
             predir = 'Datasets/NYC_crime/'
+        elif args.data == 'NYC_1km':
+            predir = 'Datasets/NYC_crime_1km/'
+        elif args.data == 'NYC_5km':
+            predir = 'Datasets/NYC_crime_5km/'
         elif args.data == 'CHI':
             predir = 'Datasets/CHI_crime/'
+        elif args.data == 'CHI_1km':
+            predir = 'Datasets/CHI_crime_1km/'
+        elif args.data == 'CHI_5km':
+            predir = 'Datasets/CHI_crime_5km/'
         elif args.data == 'SYN':
             predir = 'Datasets/SYN/'
         elif args.data == 'SEA':
             predir = 'Datasets/SEA_crime/'
         elif args.data == 'LA':
             predir = 'Datasets/LA_crime/'
-        elif args.data == 'NEW_CHI':
-            predir = 'Datasets/NEW_CHI_crime/'
         else:
             predir = None
         self.predir = predir
