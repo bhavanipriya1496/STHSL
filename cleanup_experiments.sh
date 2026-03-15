@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ---------------- Defaults ----------------
 ARCHS_ALL=("baseline" "option1" "option2")
-DATASETS_ALL=("NYC" "CHI" "LA" "SEA" "NEW_CHI" "SYN")
+DATASETS_ALL=("NYC" "CHI" "LA" "SEA" "NEW_CHI" "SYN" "NYC_1km" "NYC_5km" "CHI_1km" "CHI_5km")
 TARGETS_ALL=("Logs" "tests_validation" "Save")
 
 LOGS_DIR="Logs"
