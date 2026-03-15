@@ -464,9 +464,9 @@ class STHSL(nn.Module):
             z0_flat = z0.reshape(B, -1).unsqueeze(0)
 
             # time steps for ODE evolution
-            # t = torch.arange(start=0, end=1, step=args.horizon).float().to(z0.device)
-            t = torch.linspace(0, 1, steps=args.horizon).to(z0.device)
-            t = t / len(t)
+            t = torch.arange(start=0, end=1, step=args.horizon).float().to(z0.device)
+            # t = torch.linspace(0, 1, steps=args.horizon).to(z0.device)
+            # t = t / len(t)
 
             # ====== ODE EVOLUTION of crime latent field over time ======
             sol, _ = self.de_solver(z0_flat, t)
@@ -536,9 +536,9 @@ class STHSL(nn.Module):
             # _chk("Z_t0_after_repeat", Z_t0)
 
             # ---------- STEP 5: Solve the ODE ----------
-            time_steps_to_predict = torch.linspace(0, 1, steps=args.horizon).to(Z_t0.device)
-            # time_steps_to_predict = torch.arange(start=0, end=1, step=args.horizon).float().to(args.device)
-            time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
+            # time_steps_to_predict = torch.linspace(0, 1, steps=args.horizon).to(Z_t0.device)
+            time_steps_to_predict = torch.arange(start=0, end=1, step=args.horizon).float().to(args.device)
+            # time_steps_to_predict = time_steps_to_predict / len(time_steps_to_predict)
             # _chk("time_steps", time_steps_to_predict)
 
             sol_ys, fe = self.diffeq_solver(Z_t0, time_steps_to_predict)

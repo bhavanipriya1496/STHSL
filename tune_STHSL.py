@@ -147,35 +147,20 @@ def build_space(arch: str, cpu_only: bool) -> Space:
     spec: Dict[str, Tuple[str, Any, Any]] = {
         "use_ode_option": ("choice", [arch], None),
         "device": ("choice", device_choices, None),
-
-        "lr": ("loguniform", 1e-5, 2e-4),
-        "weight_decay": ("loguniform", 1e-6, 1e-3),
-
-        "batch": ("choice", [4, 8, 16], None),
-        "latdim": ("choice", [8, 16, 32, 64], None),
-
-        "dropRateL": ("uniform", 0.0, 0.4),
-        "dropRateG": ("uniform", 0.0, 0.3),
-        "cr": ("uniform", 0.4, 1.0),
-        "ir": ("uniform", 0.5, 2.0),
-
-        "kernelSize": ("choice", [3, 5], None),
-        "hyperNum": ("choice", [64, 128, 256], None),
+        "batch": ("choice", [4, 8, 16, 32], None),
     }
 
     if arch in ("option1", "option2"):
         spec.update(
             {
-                "n_traj_samples": ("choice", [1, 2], None),
+                "n_traj_samples": ("choice", [1, 2, 4], None),
                 "ode_method": ("choice", ["euler", "rk4", "dopri5"], None),
-                "odeint_atol": ("loguniform", 1e-2, 1e-3),
-                "odeint_rtol": ("loguniform", 1e-2, 1e-3),
-
-                "gen_layers": ("choice", [1, 2], None),
+                "ode_atol": ("choice", [1e-3, 1e-4, 1e-5], None),
+                "ode_rtol": ("choice", [1e-2, 1e-3, 1e-4], None),
+                "gen_layers": ("choice", [1, 2, 3], None),
                 "gen_dim": ("choice", [32, 64, 128], None),
-
-                "gcn_step": ("choice", [1, 2], None),
-                "horizon": ("choice", [6, 12], None),
+                "gcn_step": ("choice", [1, 2, 3], None),
+                "horizon": ("choice", [6, 12, 24], None),
             }
         )
 
@@ -326,7 +311,7 @@ def main() -> None:
     p.add_argument("--data", required=True)
     p.add_argument("--arch", choices=["baseline", "option1", "option2"], required=True)
     p.add_argument("--num-trials", type=int, default=20)
-    p.add_argument("--max-epochs", type=int, default=5)
+    p.add_argument("--max-epochs", type=int, default=10)
     p.add_argument("--eval-every", type=int, default=1)
     p.add_argument("--objective", choices=["rmse", "mae", "mape", "rmse_mae"], default="rmse_mae")
     p.add_argument("--workers", type=int, default=1, help="Parallel trial workers. Use 1 for sequential.")
