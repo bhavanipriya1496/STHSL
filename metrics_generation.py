@@ -62,8 +62,22 @@ def main():
     ap.add_argument("--save-root", default="./Save", help="Root folder that contains <data>/ checkpoints")
     ap.add_argument("--out-dir", default=".", help="Where to write metrics outputs")
     ap.add_argument("--use_ode_option", default="baseline", help="different model options: baseline, option1, option2")
+    ap.add_argument("--eval_metrics", default="all", help="Which metrics to compute/print in eval(): "
+         "error=RMSE/MAE/MAPE, accuracy=MacroF1/MicroF1/AP, all=both, none=no metrics")
+    ap.add_argument('--batch', default=16, type=int, help='batch size')
+    ap.add_argument('--n_traj_samples', default=1, type=int, help='number of trajectory samples')
+    ap.add_argument('--ode_method', default='dopri5', type=str, help='ode solver method')
+    ap.add_argument('--odeint_atol', default=1e-4, type=float, help='ode solver atol')
+    ap.add_argument('--odeint_rtol', default=1e-3, type=float, help='ode solver rtol')
+    ap.add_argument('--gen_layers', default=1, type=int, help='number of generator layers')
+    ap.add_argument('--gen_dim', default=64, type=int, help='dimension of generator layers')
+    ap.add_argument('--gcn_step', default=2, type=int, help='gcn step')
+    ap.add_argument('--rnn_units', default=64, type=int, help='number of rnn units')
+    ap.add_argument('--horizon', default=12, type=int, help='prediction horizon')
+    ap.add_argument('--filter_type', default=2, type=int, help='filter type')
     ap.add_argument("--pattern", default="*.pth", help="Checkpoint glob pattern (default: *.pth)")
     ap.add_argument("--python", default=sys.executable, help="Python executable to use (default: current)")
+    ap.add_argument('--device', type=str, default='cuda', help='cuda device')
     ap.add_argument("--dry-run", action="store_true", help="Print commands without running")
 
     # NEW: seed selection (optional)
@@ -149,7 +163,25 @@ def main():
             args.use_ode_option,
             "--checkpoint",
             str(ckpt),
+            "--batch",
+            str(args.batch),
+            "--eval_metrics",
+            str(args.eval_metrics),
         ]
+
+        if args.use_ode_option in ("option1", "option2"):
+            cmd += [
+                "--n_traj_samples", str(args.n_traj_samples),
+                "--ode_method", args.ode_method,
+                "--odeint_atol", str(args.odeint_atol),
+                "--odeint_rtol", str(args.odeint_rtol),
+                "--gen_layers", str(args.gen_layers),
+                "--gen_dim", str(args.gen_dim),
+                "--gcn_step", str(args.gcn_step),
+                "--rnn_units", str(args.rnn_units),
+                "--horizon", str(args.horizon),
+                "--filter_type", str(args.filter_type),
+            ]
 
         print(f"\n[{tag}] Running: {' '.join(cmd)}")
         print(f"[{tag}] Writing: {out_file}")

@@ -127,7 +127,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate
-[[ "$DATASET" == "all" || "$DATASET" == "NYC" || "$DATASET" == "CHI" ]] || die "--dataset must be NYC|CHI|all"
+[[ "$DATASET" == "all" || "$DATASET" == "NYC" ||  "$DATASET" == "NYC_5km" || "$DATASET" == "CHI" ||  "$DATASET" == "CHI_5km" ]] || die "--dataset must be NYC|CHI|all"
 [[ "$ARCH" == "all" || "$ARCH" == "baseline" || "$ARCH" == "option1" || "$ARCH" == "option2" ]] || die "--arch must be baseline|option1|option2|all"
 [[ "$TARGET" == "all" || "$TARGET" == "Logs" || "$TARGET" == "tests_validation" || "$TARGET" == "Save" ]] || die "--target must be Logs|tests_validation|Save|all"
 

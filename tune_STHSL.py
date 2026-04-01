@@ -155,10 +155,10 @@ def build_space(arch: str, cpu_only: bool) -> Space:
             {
                 "n_traj_samples": ("choice", [1, 2, 4], None),
                 "ode_method": ("choice", ["euler", "rk4", "dopri5"], None),
-                "ode_atol": ("choice", [1e-3, 1e-4, 1e-5], None),
+                "ode_atol": ("choice", [1e-2, 1e-3, 1e-4], None),
                 "ode_rtol": ("choice", [1e-2, 1e-3, 1e-4], None),
                 "gen_layers": ("choice", [1, 2, 3], None),
-                "gen_dim": ("choice", [32, 64, 128], None),
+                "gen_dim": ("choice", [32, 64, 200], None),
                 "gcn_step": ("choice", [1, 2, 3], None),
                 "horizon": ("choice", [6, 12, 24], None),
             }

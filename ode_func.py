@@ -87,8 +87,6 @@ class ODEFunc(nn.Module):
             utils.init_network_weights(ode_func_net)
             self.gradient_net = ode_func_net
         else:
-            self._gcn_step = gcn_step
-            self._gconv_params = LayerParams(self, 'gconv')
             self._supports = []
             supports = []
             supports.append(utils.calculate_random_walk_matrix(adj_mx).T)

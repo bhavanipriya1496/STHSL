@@ -52,6 +52,6 @@ def parse_args():
     default=0.0,
     help="Binarize prediction for F1: pred_bin = (pred > threshold). Default 0.0"
     )
-    parser.add_argument("--seeds", nargs="+", type=int, default=[0,1,2,3,4,5,6,7,8,9])
+    parser.add_argument("--seeds", nargs="+", type=int, default=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
     return parser.parse_args()
 args = parse_args()

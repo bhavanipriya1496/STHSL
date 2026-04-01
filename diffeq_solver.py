@@ -33,6 +33,10 @@ class DiffeqSolver(nn.Module):
         # pred_y shape: (horizon, n_traj_samples * batch_size, num_nodes * latent_dim)
         start_time = time.time()
         self.odefunc.nfe = 0
+        # print("time_steps_to_predict:", time_steps_to_pred)
+        # print("dtype:", time_steps_to_pred.dtype)
+        # print("diffs:", time_steps_to_pred[1:] - time_steps_to_pred[:-1])
+        assert torch.all(time_steps_to_pred[1:] > time_steps_to_pred[:-1]), f"Non-increasing time grid: {time_steps_to_pred}"
         pred_y = odeint(self.odefunc, 
                             first_point, 
                             time_steps_to_pred, 

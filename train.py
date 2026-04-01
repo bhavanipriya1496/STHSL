@@ -56,7 +56,19 @@ def run_one_seed(seed: int):
         if test:
             res_eval = engine.eval(True, True)
 
-            if args.eval_metrics in ("error", "all"):
+            if args.eval_metrics in ("accuracy", "all"):
+                # maximize MicroF1 + MacroF1
+                micro = res_eval["MicroF1"]
+                macro = res_eval["MacroF1"]
+                val_score = micro + macro
+                best_score = eval_bestRes["ACC_SCORE"]
+                if val_score > best_score:
+                    print("Val (MicroF1+MacroF1) increase from %.4f to %.4f" % (best_score, val_score))
+                    eval_bestRes["ACC_SCORE"] = val_score
+                    eval_bestRes["MicroF1"] = micro
+                    eval_bestRes["MacroF1"] = macro
+                    update = True
+            elif args.eval_metrics == "error":
                 # minimize RMSE+MAE
                 val_metrics = res_eval["RMSE"] + res_eval["MAE"]
                 val_best_metrics = eval_bestRes["RMSE"] + eval_bestRes["MAE"]
@@ -65,21 +77,6 @@ def run_one_seed(seed: int):
                     eval_bestRes["RMSE"] = res_eval["RMSE"]
                     eval_bestRes["MAE"]  = res_eval["MAE"]
                     update = True
-
-            elif args.eval_metrics == "accuracy":
-                # maximize MicroF1 + MacroF1
-                micro = res_eval["MicroF1"]
-                macro = res_eval["MacroF1"]
-                val_score = micro + macro
-
-                best_score = eval_bestRes["ACC_SCORE"]
-                if val_score > best_score:
-                    print("Val (MicroF1+MacroF1) increase from %.4f to %.4f" % (best_score, val_score))
-                    eval_bestRes["ACC_SCORE"] = val_score
-                    eval_bestRes["MicroF1"] = micro
-                    eval_bestRes["MacroF1"] = macro
-                    update = True
-
             else:
                 # none: do not do early stopping updates based on eval metrics
                 pass
