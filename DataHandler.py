@@ -8,14 +8,22 @@ class DataHandler:
             predir = 'Datasets/NYC_crime/'
         elif args.data == 'NYC_1km':
             predir = 'Datasets/NYC_crime_1km/'
+        elif args.data == 'old_NYC_5km':
+            predir = 'Datasets/old_NYC_crime_5km/'
+        elif args.data == 'NYC_3km':
+            predir = 'Datasets/common_data/NYC_crime_3km/'
         elif args.data == 'NYC_5km':
-            predir = 'Datasets/NYC_crime_5km/'
+            predir = 'Datasets/common_data/NYC_crime_5km/'
         elif args.data == 'CHI':
             predir = 'Datasets/CHI_crime/'
         elif args.data == 'CHI_1km':
             predir = 'Datasets/CHI_crime_1km/'
+        elif args.data == 'old_CHI_5km':
+            predir = 'Datasets/old_CHI_crime_5km/'
+        elif args.data == 'CHI_3km':
+            predir = 'Datasets/common_data/CHI_crime_3km/'
         elif args.data == 'CHI_5km':
-            predir = 'Datasets/CHI_crime_5km/'
+            predir = 'Datasets/common_data/CHI_crime_5km/'
         elif args.data == 'SYN':
             predir = 'Datasets/SYN/'
         elif args.data == 'SEA':

@@ -4,11 +4,18 @@ import os
 import pandas as pd
 from typing import Optional, Tuple
 
-CATEGORY_MAP = {
-    "0": "Burglary",
-    "1": "Larceny",
-    "2": "Robbery",
-    "3": "Assault",
+CATEGORY_MAP_NYC = {
+    "0": "BURGLARY",
+    "1": "FELONY ASSAULT",
+    "2": "GRAND LARCENY",
+    "3": "ROBBERY",
+}
+
+CATEGORY_MAP_CHI = {
+    "0": "ASSAULT",
+    "1": "BATTERY",
+    "2": "CRIMINAL DAMAGE",
+    "3": "THEFT",
 }
 
 SPARSITY_MAP = {
@@ -55,14 +62,14 @@ def parse_metrics_from_file(filepath: str) -> dict:
             metrics[key] = value
             continue
 
-        m = re.match(r"(RMSE|MAE|MAPE|F1_cate_|AP_cate|Acc_cate)_([0-9]+)", key)
+        m = re.match(r"(RMSE|MAE|MAPE|MacroF1|MicroF1|AP|Acc)_cate_([0-9]+)$", key)
         if m:
             mtype, cid = m.groups()
             cname = CATEGORY_MAP.get(cid, cid)
             metrics[f"{mtype}_{cname}"] = value
             continue
 
-        s = re.match(r"(RMSE|MAE|MAPE|F1|AP|Acc)_mask_([0-9]+)", key)
+        s = re.match(r"(RMSE|MAE|MAPE|MacroF1|MicroF1|F1|AP|Acc)_mask_([0-9]+)", key)
         if s:
             mtype, sid = s.groups()
             sname = SPARSITY_MAP.get(sid, sid)
@@ -109,6 +116,19 @@ def main():
         sys.exit(1)
 
     print(f"\nReading folder: {folder}\n")
+
+    city = 'nyc'  # default
+    if '--city' in sys.argv:
+        idx = sys.argv.index('--city')
+        city = sys.argv[idx + 1].lower()
+
+    global CATEGORY_MAP
+    if city == 'chicago' or city == 'chi':
+        CATEGORY_MAP = CATEGORY_MAP_CHI
+    else:
+        CATEGORY_MAP = CATEGORY_MAP_NYC
+
+    print(f"City: {city} — using category map: {CATEGORY_MAP}")
 
     files: list[tuple[int, int, str]] = []
     for filename in os.listdir(folder):

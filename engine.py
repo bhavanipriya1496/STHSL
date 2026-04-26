@@ -322,14 +322,17 @@ class trainer():
                 p = np.concatenate(per_cat_preds[c])
                 s = np.concatenate(per_cat_scores[c])
 
-                ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+                # ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+                ret[f"MacroF1_cate_{c}"] = f1_score(y, p, average='macro', zero_division=0)
+                ret[f"MicroF1_cate_{c}"] = f1_score(y, p, average='micro', zero_division=0)
                 ret[f"Acc_cate_{c}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                 ret[f"AP_cate_{c}"] = (
                     average_precision_score(y, s)
                     if np.unique(y).size > 1 else float("nan")
                 )
 
-            ret["MacroF1_over_categories"] = np.mean([ret[f"F1_cate_{c}"] for c in range(C)])
+            ret["MacroF1_over_categories"] = np.mean([ret[f"MacroF1_cate_{c}"] for c in range(C)])
+            ret["MicroF1_over_categories"] = np.mean([ret[f"MicroF1_cate_{c}"] for c in range(C)])
             ret["MacroAP_over_categories"] = np.nanmean([ret[f"AP_cate_{c}"] for c in range(C)])
             ret["MacroAcc_over_categories"] = np.nanmean([ret[f"Acc_cate_{c}"] for c in range(C)])
 
@@ -340,7 +343,9 @@ class trainer():
                     p = np.concatenate(per_mask_preds[k])
                     s = np.concatenate(per_mask_scores[k])
 
-                    ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+                    # ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+                    ret[f"MacroF1_mask_{k}"] = f1_score(y, p, average='macro', zero_division=0)
+                    ret[f"MicroF1_mask_{k}"] = f1_score(y, p, average='micro', zero_division=0)
                     ret[f"Acc_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                     ret[f"AP_mask_{k}"] = (
                         average_precision_score(y, s)
@@ -354,7 +359,8 @@ class trainer():
                         p = np.concatenate(per_cat_mask_preds[(c, k)])
                         s = np.concatenate(per_cat_mask_scores[(c, k)])
 
-                        ret[f"F1_cate_{c}_mask_{k}"] = f1_score(y, p, zero_division=0)
+                        ret[f"MacroF1_cate_{c}_mask_{k}"] = f1_score(y, p, average='macro', zero_division=0)
+                        ret[f"MicroF1_cate_{c}_mask_{k}"] = f1_score(y, p, average='micro', zero_division=0)
                         ret[f"Acc_cate_{c}_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                         ret[f"AP_cate_{c}_mask_{k}"] = (
                             average_precision_score(y, s)
@@ -364,9 +370,9 @@ class trainer():
         if isSparsity == False:
             if want_error:
                 for i in range(args.offNum):
-                    ret['RMSE_%d' % i] = np.sqrt(epochSqLoss[i] / epochTstNum[i])
-                    ret['MAE_%d' % i] = epochAbsLoss[i] / epochTstNum[i]
-                    ret['MAPE_%d' % i] = epochApeLoss[i] / epochPosNums[i]
+                    ret[f'RMSE_cate_{i}'] = np.sqrt(epochSqLoss[i] / epochTstNum[i])
+                    ret[f'MAE_cate_{i}'] = epochAbsLoss[i] / epochTstNum[i]
+                    ret[f'MAPE_cate_{i}'] = epochApeLoss[i] / epochPosNums[i]
                 ret['RMSE'] = np.sqrt(np.sum(epochSqLoss) / np.sum(epochTstNum))
                 ret['MAE'] = np.sum(epochAbsLoss) / np.sum(epochTstNum)
                 ret['MAPE'] = np.sum(epochApeLoss) / np.sum(epochPosNums)
@@ -377,9 +383,9 @@ class trainer():
                 ret['MAE'] = np.sum(epochAbsLoss) / np.sum(epochTstNum)
                 ret['MAPE'] = np.sum(epochApeLoss) / np.sum(epochPosNums)
                 for k in range(args.offNum):
-                    ret['RMSE_%d' % k] = np.sqrt(epochSqLoss[k] / epochTstNum[k])
-                    ret['MAE_%d' % k] = epochAbsLoss[k] / epochTstNum[k]
-                    ret['MAPE_%d' % k] = epochApeLoss[k] / epochPosNums[k]
+                    ret[f'RMSE_cate_{k}'] = np.sqrt(epochSqLoss[k] / epochTstNum[k])
+                    ret[f'MAE_cate_{k}']  = epochAbsLoss[k] / epochTstNum[k]
+                    ret[f'MAPE_cate_{k}'] = epochApeLoss[k] / epochPosNums[k]
 
                 ret['RMSE_mask_1'] = np.sqrt(np.sum(epochSqLoss1) / np.sum(epochTstNum1))
                 ret['MAE_mask_1'] = np.sum(epochAbsLoss1) / np.sum(epochTstNum1)
@@ -595,14 +601,17 @@ def test(model, handler):
             p = np.concatenate(per_cat_preds[c])
             s = np.concatenate(per_cat_scores[c])
 
-            ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+            # ret[f"F1_cate_{c}"] = f1_score(y, p, zero_division=0)
+            ret[f"MacroF1_cate_{c}"] = f1_score(y, p, average='macro', zero_division=0)
+            ret[f"MicroF1_cate_{c}"] = f1_score(y, p, average='micro', zero_division=0)
             ret[f"Acc_cate_{c}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
             ret[f"AP_cate_{c}"] = (
                 average_precision_score(y, s)
                 if np.unique(y).size > 1 else float("nan")
             )
 
-        ret["MacroF1_over_categories"] = np.mean([ret[f"F1_cate_{c}"] for c in range(C)])
+        ret["MacroF1_over_categories"] = np.mean([ret[f"MacroF1_cate_{c}"] for c in range(C)])
+        ret["MicroF1_over_categories"] = np.mean([ret[f"MicroF1_cate_{c}"] for c in range(C)])
         ret["MacroAP_over_categories"] = np.nanmean([ret[f"AP_cate_{c}"] for c in range(C)])
         ret["MacroAcc_over_categories"] = np.nanmean([ret[f"Acc_cate_{c}"] for c in range(C)])
 
@@ -612,7 +621,9 @@ def test(model, handler):
             p = np.concatenate(per_mask_preds[k])
             s = np.concatenate(per_mask_scores[k])
 
-            ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+            # ret[f"F1_mask_{k}"] = f1_score(y, p, zero_division=0)
+            ret[f"MacroF1_mask_{k}"] = f1_score(y, p, average='macro', zero_division=0)
+            ret[f"MicroF1_mask_{k}"] = f1_score(y, p, average='micro', zero_division=0)
             ret[f"Acc_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
             ret[f"AP_mask_{k}"] = (
                 average_precision_score(y, s)
@@ -626,7 +637,8 @@ def test(model, handler):
                 p = np.concatenate(per_cat_mask_preds[(c, k)])
                 s = np.concatenate(per_cat_mask_scores[(c, k)])
 
-                ret[f"F1_cate_{c}_mask_{k}"] = f1_score(y, p, zero_division=0)
+                ret[f"MacroF1_cate_{c}_mask_{k}"] = f1_score(y, p, average='macro', zero_division=0)
+                ret[f"MicroF1_cate_{c}_mask_{k}"] = f1_score(y, p, average='micro', zero_division=0)
                 ret[f"Acc_cate_{c}_mask_{k}"] = accuracy_score(y, p) if y.size > 0 else float("nan")
                 ret[f"AP_cate_{c}_mask_{k}"] = (
                     average_precision_score(y, s)
@@ -639,9 +651,9 @@ def test(model, handler):
         ret['MAPE'] = np.sum(epochApeLoss) / np.sum(epochPosNums)
 
         for i in range(args.offNum):
-            ret['RMSE_%d' % i] = np.sqrt(epochSqLoss[i] / epochTstNum[i])
-            ret['MAE_%d' % i] = epochAbsLoss[i] / epochTstNum[i]
-            ret['MAPE_%d' % i] = epochApeLoss[i] / epochPosNums[i]
+            ret[f'RMSE_cate_{i}'] = np.sqrt(epochSqLoss[i] / epochTstNum[i])
+            ret[f'MAE_cate_{i}'] = epochAbsLoss[i] / epochTstNum[i]
+            ret[f'MAPE_cate_{i}'] = epochApeLoss[i] / epochPosNums[i]
 
         ret['RMSE_mask_1'] = np.sqrt(np.sum(epochSqLoss1) / np.sum(epochTstNum1))
         ret['MAE_mask_1'] = np.sum(epochAbsLoss1) / np.sum(epochTstNum1)
