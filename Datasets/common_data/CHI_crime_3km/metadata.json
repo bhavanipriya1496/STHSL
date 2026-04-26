@@ -1,0 +1,83 @@
+{
+    "created_at": "2026-04-21T20:54:46.096974",
+    "source_csv": "CHI_Crime.csv",
+    "offense_map": {
+        "ASSAULT": 0,
+        "BATTERY": 1,
+        "CRIMINAL DAMAGE": 2,
+        "THEFT": 3
+    },
+    "id_to_offense": {
+        "0": "ASSAULT",
+        "1": "BATTERY",
+        "2": "CRIMINAL DAMAGE",
+        "3": "THEFT"
+    },
+    "raw_offense_counts": {
+        "ASSAULT": 35711,
+        "BATTERY": 99066,
+        "CRIMINAL DAMAGE": 59521,
+        "THEFT": 117733
+    },
+    "num_events": 312031,
+    "time_range": {
+        "min": "2015-01-01 00:00:00",
+        "max": "2016-12-31 23:59:00"
+    },
+    "spatial_bounds": {
+        "min_lat": 41.644604096,
+        "max_lat": 42.022575055,
+        "min_lon": -87.927881741,
+        "max_lon": -87.524529378
+    },
+    "grid": {
+        "lat_cells": 14,
+        "lon_cells": 12,
+        "cell_km": 3
+    },
+    "tensor_shapes": {
+        "train": [
+            14,
+            12,
+            547,
+            4
+        ],
+        "val": [
+            14,
+            12,
+            31,
+            4
+        ],
+        "test": [
+            14,
+            12,
+            153,
+            4
+        ]
+    },
+    "split_event_counts": {
+        "train": 228058,
+        "val": 15100,
+        "test": 68873
+    },
+    "split_class_counts": {
+        "train": [
+            26200.0,
+            73893.0,
+            43325.0,
+            84640.0
+        ],
+        "val": [
+            1711.0,
+            4681.0,
+            2977.0,
+            5731.0
+        ],
+        "test": [
+            7800.0,
+            20492.0,
+            13219.0,
+            27362.0
+        ]
+    }
+}
