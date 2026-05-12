@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ---------------- Defaults ----------------
 ARCHS_ALL=("baseline" "option1" "option2")
-DATASETS_ALL=("NYC" "CHI" "LA" "SEA" "NEW_CHI" "SYN" "NYC_1km" "NYC_5km" "CHI_1km" "CHI_5km", "old_NYC_5km", "old_CHI_5km", "NYC_3km", "CHI_3km")
+DATASETS_ALL=("NYC" "CHI" "LA" "SEA" "NEW_CHI" "SYN" "NYC_1km" "NYC_5km" "CHI_1km" "CHI_5km" "old_NYC_5km" "old_CHI_5km" "NYC_3km" "CHI_3km")
 TARGETS_ALL=("Logs" "tests_validation" "Save")
 
 LOGS_DIR="Logs"
@@ -127,7 +127,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate
-[[ "$DATASET" == "all" || "$DATASET" == "NYC" ||  "$DATASET" == "NYC_5km" || "$DATASET" == "CHI" ||  "$DATASET" == "CHI_5km" ]] || die "--dataset must be NYC|CHI|all"
+if [[ "$DATASET" != "all" ]]; then
+  valid=false
+  for ds in "${DATASETS_ALL[@]}"; do
+    if [[ "$DATASET" == "$ds" ]]; then
+      valid=true
+      break
+    fi
+  done
+  [[ "$valid" == true ]] || die "--dataset must be one of: ${DATASETS_ALL[*]} or all"
+fi
 [[ "$ARCH" == "all" || "$ARCH" == "baseline" || "$ARCH" == "option1" || "$ARCH" == "option2" ]] || die "--arch must be baseline|option1|option2|all"
 [[ "$TARGET" == "all" || "$TARGET" == "Logs" || "$TARGET" == "tests_validation" || "$TARGET" == "Save" ]] || die "--target must be Logs|tests_validation|Save|all"
 

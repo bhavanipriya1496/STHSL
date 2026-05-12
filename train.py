@@ -22,6 +22,8 @@ def run_one_seed(seed: int):
     print("start training...", flush=True)
 
     train_time = []
+    epoch_times_train = []   # training-only times
+    epoch_times_total = []   # training + eval times
     bestRes = None
     eval_bestRes = dict()
 
@@ -44,7 +46,21 @@ def run_one_seed(seed: int):
     for i in range(1, args.epoch + 1):
         t1 = time.time()
 
+        # ==================== TRAIN TIMER ====================
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        train_start = time.time()
+        # =====================================================
+
         metrics, metrics1 = engine.train()
+
+        # ==================== TRAINING TIME ==================
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        train_end = time.time()
+        train_only_time = train_end - train_start
+        epoch_times_train.append(train_only_time)
+        # =====================================================
 
         print(f'Epoch {i:2d} Training Time {time.time() - t1:.3f}s')
         ret = 'Epoch %d/%d, %s %.4f,  %s %.4f' % (
@@ -108,6 +124,24 @@ def run_one_seed(seed: int):
         print()
         t2 = time.time()
         train_time.append(t2 - t1)
+        epoch_times_total.append(t2 - t1)
+
+        # ==================== PER-EPOCH PRINT ================
+        print(f'  [RUNTIME] Epoch {i}: train={train_only_time:.2f}s | train+eval={t2-t1:.2f}s')
+        # =====================================================
+
+    # ==================== RUNTIME SUMMARY ====================
+    print('\n' + '='*60)
+    print('RUNTIME ANALYSIS SUMMARY (STHSL)')
+    print('='*60)
+    print(f'  Seed:                      {seed}')
+    print(f'  Epochs run:                {len(epoch_times_train)}')
+    print(f'  Avg train time/epoch:      {np.mean(epoch_times_train):.2f}s (+/- {np.std(epoch_times_train):.2f}s)')
+    print(f'  Avg total time/epoch:      {np.mean(epoch_times_total):.2f}s (+/- {np.std(epoch_times_total):.2f}s)')
+    print(f'  Per-epoch train times:     {[f"{t:.2f}" for t in epoch_times_train]}')
+    print(f'  Total training time:       {sum(epoch_times_total):.2f}s')
+    print('='*60 + '\n')
+    # ===========================================================
 
     print(makePrint('Best', args.epoch, bestRes))
     return bestRes
