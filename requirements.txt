@@ -1,6 +1,9 @@
-numpy==2.4.6
-pandas==3.0.3
-scikit_learn==1.8.0
-scipy==1.17.1
+python: 3.11.9
+torch: 2.3.1+cu121
+numpy: 1.26.4
+pandas: 2.2.2
+scipy: 1.14.0
 torch==2.3.1
 torchdiffeq==0.2.5
+sklearn: 1.5.0
+torchmetrics: 1.4.0.post0
