@@ -152,7 +152,7 @@ def main():
     # Option 2: otherwise fallback to a default list.
     seeds = getattr(args, "seeds", None)
     if seeds is None:
-        seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        seeds = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
     all_best = {}
     for s in seeds:
